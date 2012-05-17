@@ -11,6 +11,7 @@
 #include <map>
 #include <vector>
 #include <string.h>
+#include <assert.h>
 
 extern "C" {
 #include "..\lua\lua.h"
@@ -26,46 +27,55 @@ namespace ELuna
 		const char* str;
 		size_t len;
 	};
-	// read a value from lua stack
-	template<typename T> inline T   read(lua_State *L, int index) { printf("param type error!\n"); assert(0);};
-	template<>	inline bool         read(lua_State *L, int index) { if(lua_isboolean(L, index)) return lua_toboolean(L, index) != 0; else return lua_tonumber(L, index) != 0;};
-	template<>	inline char*		read(lua_State *L, int index) { return (char*)lua_tostring(L, index); };
-	template<>	inline const char*	read(lua_State *L, int index) { return (const char*)lua_tostring(L, index);};
-	template<>	inline char			read(lua_State *L, int index) { return (char)lua_tonumber(L, index);};
-	template<>	inline unsigned char  read(lua_State *L, int index) { return (unsigned char)lua_tonumber(L, index);};
-	template<>	inline short		read(lua_State *L, int index) { return (short)lua_tonumber(L, index);};
-	template<>	inline unsigned short read(lua_State *L, int index) { return (unsigned short)lua_tonumber(L, index);};
-	template<>	inline long			read(lua_State *L, int index) { return (long)lua_tonumber(L, index);}; 
-	template<>	inline unsigned long  read(lua_State *L, int index) { return (unsigned long)lua_tonumber(L, index);};
-	template<>	inline int			read(lua_State *L, int index) { return (int)lua_tonumber(L, index);};
-	template<>	inline unsigned int	read(lua_State *L, int index) { return (unsigned int)lua_tonumber(L, index);};
-	template<>	inline long long    read(lua_State *L, int index) { return (long long)lua_tonumber(L, index);};
-	template<>  inline unsigned long long  read(lua_State *L, int index) { return (unsigned long long)lua_tonumber(L, index);};
-	template<>	inline float		read(lua_State *L, int index) { return (float)lua_tonumber(L, index);};
-	template<>	inline double		read(lua_State *L, int index) { return (double)lua_tonumber(L, index);};
-	template<>	inline void			read(lua_State *L, int index) { return;}; 
-	//template<>	table				read(lua_State *L, int index);
-	template<>	inline LuaString	read(lua_State *L, int index) { LuaString ls; ls.str = (char*)lua_tolstring(L, index, &ls.len); return ls;};
-	
-	// push a value to lua stack
-	template<typename T> inline void push(lua_State *L, T ret) { printf("return type error!\n"); assert(0);};
-	template<> inline void push(lua_State *L, char ret) { lua_pushnumber(L, ret);};
-	template<> inline void push(lua_State *L, unsigned char ret) { lua_pushnumber(L, ret);};
-	template<> inline void push(lua_State *L, short ret) { lua_pushnumber(L, ret);};
-	template<> inline void push(lua_State *L, unsigned short ret) { lua_pushnumber(L, ret);};
-	template<> inline void push(lua_State *L, long ret) { lua_pushnumber(L, ret);};
-	template<> inline void push(lua_State *L, unsigned long ret) { lua_pushnumber(L, ret);};
-	template<> inline void push(lua_State *L, int ret) { lua_pushnumber(L, ret);};
-	template<> inline void push(lua_State *L, unsigned int ret) { lua_pushnumber(L, ret);};
-	template<> inline void push(lua_State *L, float ret) { lua_pushnumber(L, ret);};
-	template<> inline void push(lua_State *L, double ret) { lua_pushnumber(L, ret);};
-	template<> inline void push(lua_State *L, char* ret) { lua_pushstring(L, ret);};
-	template<> inline void push(lua_State *L, const char* ret) { lua_pushstring(L, ret);};
-	template<> inline void push(lua_State *L, bool ret) { lua_pushboolean(L, ret);};
-	template<> inline void push(lua_State *L, long long ret) { return lua_pushnumber(L, (LUA_NUMBER)ret);};
-	template<> inline void push(lua_State *L, unsigned long long ret) { return lua_pushnumber(L, (LUA_NUMBER)ret);};
-	template<> inline void push(lua_State *L, LuaString ret) {lua_pushlstring(L, ret.str, ret.len);};
 
+	///////////////////////////////////////////////////////////////////////////////
+	// read a value from lua to cpp
+	///////////////////////////////////////////////////////////////////////////////
+	template<typename T> inline T   read2cpp(lua_State *L, int index) { printf("param type error!\n"); assert(0);};
+	template<>	inline bool         read2cpp(lua_State *L, int index) { if(lua_isboolean(L, index)) return lua_toboolean(L, index) != 0; else return lua_tonumber(L, index) != 0;};
+	template<>	inline char*		read2cpp(lua_State *L, int index) { return (char*)lua_tostring(L, index); };
+	template<>	inline const char*	read2cpp(lua_State *L, int index) { return (const char*)lua_tostring(L, index);};
+	template<>	inline char			read2cpp(lua_State *L, int index) { return (char)lua_tonumber(L, index);};
+	template<>	inline unsigned char  read2cpp(lua_State *L, int index) { return (unsigned char)lua_tonumber(L, index);};
+	template<>	inline short		read2cpp(lua_State *L, int index) { return (short)lua_tonumber(L, index);};
+	template<>	inline unsigned short read2cpp(lua_State *L, int index) { return (unsigned short)lua_tonumber(L, index);};
+	template<>	inline long			read2cpp(lua_State *L, int index) { return (long)lua_tonumber(L, index);}; 
+	template<>	inline unsigned long  read2cpp(lua_State *L, int index) { return (unsigned long)lua_tonumber(L, index);};
+	template<>	inline int			read2cpp(lua_State *L, int index) { return (int)lua_tonumber(L, index);};
+	template<>	inline unsigned int	read2cpp(lua_State *L, int index) { return (unsigned int)lua_tonumber(L, index);};
+	template<>	inline long long    read2cpp(lua_State *L, int index) { return (long long)lua_tonumber(L, index);};
+	template<>  inline unsigned long long  read2cpp(lua_State *L, int index) { return (unsigned long long)lua_tonumber(L, index);};
+	template<>	inline float		read2cpp(lua_State *L, int index) { return (float)lua_tonumber(L, index);};
+	template<>	inline double		read2cpp(lua_State *L, int index) { return (double)lua_tonumber(L, index);};
+	template<>	inline void			read2cpp(lua_State *L, int index) { return;}; 
+	//template<>	table				read2cpp(lua_State *L, int index);
+	template<>	inline LuaString	read2cpp(lua_State *L, int index) { LuaString ls; ls.str = (char*)lua_tolstring(L, index, &ls.len); return ls;};
+	
+	///////////////////////////////////////////////////////////////////////////////
+	// push a value from cpp to lua
+	///////////////////////////////////////////////////////////////////////////////
+	template<typename T> inline void push2lua(lua_State *L, T ret) { printf("return type error!\n"); assert(0);};
+	template<> inline void push2lua(lua_State *L, char ret) { lua_pushnumber(L, ret);};
+	template<> inline void push2lua(lua_State *L, unsigned char ret) { lua_pushnumber(L, ret);};
+	template<> inline void push2lua(lua_State *L, short ret) { lua_pushnumber(L, ret);};
+	template<> inline void push2lua(lua_State *L, unsigned short ret) { lua_pushnumber(L, ret);};
+	template<> inline void push2lua(lua_State *L, long ret) { lua_pushnumber(L, ret);};
+	template<> inline void push2lua(lua_State *L, unsigned long ret) { lua_pushnumber(L, ret);};
+	template<> inline void push2lua(lua_State *L, int ret) { lua_pushnumber(L, ret);};
+	template<> inline void push2lua(lua_State *L, unsigned int ret) { lua_pushnumber(L, ret);};
+	template<> inline void push2lua(lua_State *L, float ret) { lua_pushnumber(L, ret);};
+	template<> inline void push2lua(lua_State *L, double ret) { lua_pushnumber(L, ret);};
+	template<> inline void push2lua(lua_State *L, char* ret) { lua_pushstring(L, ret);};
+	template<> inline void push2lua(lua_State *L, const char* ret) { lua_pushstring(L, ret);};
+	template<> inline void push2lua(lua_State *L, bool ret) { lua_pushboolean(L, ret);};
+	template<> inline void push2lua(lua_State *L, long long ret) { return lua_pushnumber(L, (LUA_NUMBER)ret);};
+	template<> inline void push2lua(lua_State *L, unsigned long long ret) { return lua_pushnumber(L, (LUA_NUMBER)ret);};
+	template<> inline void push2lua(lua_State *L, LuaString ret) {lua_pushlstring(L, ret.str, ret.len);};
+
+
+	///////////////////////////////////////////////////////////////////////////////
+	// bind cpp method 
+	///////////////////////////////////////////////////////////////////////////////
 	#define ELUNA_METHODCLASSES_PARAM_LIST_0 typename T
 	#define ELUNA_METHODCLASSES_PARAM_LIST_1 ELUNA_METHODCLASSES_PARAM_LIST_0, typename P1
 	#define ELUNA_METHODCLASSES_PARAM_LIST_2 ELUNA_METHODCLASSES_PARAM_LIST_1, typename P2
@@ -97,33 +107,26 @@ namespace ELuna
 	#define ELUNA_PARAM_LIST_8 ELUNA_PARAM_LIST_7, P8
 	#define ELUNA_PARAM_LIST_9 ELUNA_PARAM_LIST_8, P9
 	#define ELUNA_READ_PARAM_LIST_0
-	#define ELUNA_READ_PARAM_LIST_1 ELUNA_READ_PARAM_LIST_0  read<P1>(L,2)
-	#define ELUNA_READ_PARAM_LIST_2 ELUNA_READ_PARAM_LIST_1, read<P2>(L,3)
-	#define ELUNA_READ_PARAM_LIST_3 ELUNA_READ_PARAM_LIST_2, read<P3>(L,4)
-	#define ELUNA_READ_PARAM_LIST_4 ELUNA_READ_PARAM_LIST_3, read<P4>(L,5)
-	#define ELUNA_READ_PARAM_LIST_5 ELUNA_READ_PARAM_LIST_4, read<P5>(L,6)
-	#define ELUNA_READ_PARAM_LIST_6 ELUNA_READ_PARAM_LIST_5, read<P6>(L,7)
-	#define ELUNA_READ_PARAM_LIST_7 ELUNA_READ_PARAM_LIST_6, read<P7>(L,8)
-	#define ELUNA_READ_PARAM_LIST_8 ELUNA_READ_PARAM_LIST_7, read<P8>(L,9)
-	#define ELUNA_READ_PARAM_LIST_9 ELUNA_READ_PARAM_LIST_8, read<P9>(L,10)
+	#define ELUNA_READ_PARAM_LIST_1 ELUNA_READ_PARAM_LIST_0  read2cpp<P1>(L,2)
+	#define ELUNA_READ_PARAM_LIST_2 ELUNA_READ_PARAM_LIST_1, read2cpp<P2>(L,3)
+	#define ELUNA_READ_PARAM_LIST_3 ELUNA_READ_PARAM_LIST_2, read2cpp<P3>(L,4)
+	#define ELUNA_READ_PARAM_LIST_4 ELUNA_READ_PARAM_LIST_3, read2cpp<P4>(L,5)
+	#define ELUNA_READ_PARAM_LIST_5 ELUNA_READ_PARAM_LIST_4, read2cpp<P5>(L,6)
+	#define ELUNA_READ_PARAM_LIST_6 ELUNA_READ_PARAM_LIST_5, read2cpp<P6>(L,7)
+	#define ELUNA_READ_PARAM_LIST_7 ELUNA_READ_PARAM_LIST_6, read2cpp<P7>(L,8)
+	#define ELUNA_READ_PARAM_LIST_8 ELUNA_READ_PARAM_LIST_7, read2cpp<P8>(L,9)
+	#define ELUNA_READ_PARAM_LIST_9 ELUNA_READ_PARAM_LIST_8, read2cpp<P9>(L,10)
 
 	struct GenericMethod
 	{
 	public:
 		virtual ~GenericMethod() {};
-		//int PerformCall(CHost* _host, lua_State *L, LuaCustomVariable *_lcv) const;
-		//int MatchParams(lua_State *L, LuaCustomVariable *_lcv) const;
-		//const char* GetVerboseName(lua_State *L) const;
-	
 		GenericMethod() {};
-		//virtual int PerformCallV(CHost* _host, lua_State *L, LuaCustomVariable *_lcv) const;
+
 		virtual int call(lua_State *L) { return 0;};
 		virtual inline const char* getMethodName(){ return m_name;};
-		//virtual inline void bindClassObj(void* obj) {};
 
 	private:
-		//bool m_IsConst; // method is const?
-		//bool m_IsOperatorMethod; // was current GM binded as .Operator(XXX, &MyClass::SomeMethod) ?
 		const char* m_name;
 	};
 
@@ -135,13 +138,14 @@ namespace ELuna
 		TFUNC m_func;\
 		const char* m_name;\
 		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		~MethodClass##N(){ printf("method releace %s\n", m_name);};\
 		virtual inline const char* getMethodName(){ return m_name;};\
 		virtual int call(lua_State *L)\
 		{\
 			lua_pushnumber(L, 0);\
 			lua_rawget(L, 1); \
 			T** obj = (T**)lua_touserdata(L, -1);\
-			push(L, ((*obj)->*(m_func))(ELUNA_READ_PARAM_LIST_##N));\
+			push2lua(L, ((*obj)->*(m_func))(ELUNA_READ_PARAM_LIST_##N));\
 			return 1;\
 		};\
 	};
@@ -154,6 +158,7 @@ namespace ELuna
 		TFUNC m_func;\
 		const char* m_name;\
 		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		~MethodClass##N(){ printf("method releace %s\n", m_name);};\
 		virtual inline const char* getMethodName(){ return m_name;};\
 		virtual int call(lua_State *L)\
 		{\
@@ -213,7 +218,6 @@ namespace ELuna
 		static inline const char* className(const char* name = NULL)
 		{
 			static const char* _name;
-			//printf("class_name1 %s, %s\n ", _name, name);
 			if(name) _name = name;
 			printf("class_name2 %s, %s\n ", _name, name);
 			return _name;
@@ -242,12 +246,12 @@ namespace ELuna
 		insertProxyClass(name, pClass);
 
         lua_pushcfunction(L, func);
-        lua_setglobal(L, name); // T() in lua will make a new instance.
+        lua_setglobal(L, name); 
 
         registerMetatable<T>(L, name);
     }
 
-    // register the metatable without registering the class constructor
+
 	template<typename T>
     inline void registerMetatable(lua_State *L, const char *name) {
         printf("Register Metatable %s\n", name);
@@ -269,55 +273,55 @@ namespace ELuna
     template<typename T, typename P1>
     inline int constructor(lua_State *L)
     {   
-        return inject<T>(L, new T(read<P1>(L,1)));
+        return inject<T>(L, new T(read2cpp<P1>(L,1)));
     }
 
     template<typename T, typename P1, typename P2>
     inline int constructor(lua_State *L)
     {
-        return inject<T>(L, new T(read<P1>(L,1), read<P2>(L,2)));
+        return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2)));
     }
 
     template<typename T, typename P1, typename P2, typename P3>
     inline int constructor(lua_State *L)
     {
-        return inject<T>(L, new T(read<P1>(L,1), read<P2>(L,2), read<P3>(L,3)));
+        return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3)));
     }
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4>
 	inline int constructor(lua_State *L)
 	{
-		return inject<T>(L, new T(read<P1>(L,1), read<P2>(L,2), read<P3>(L,3), read<P4>(L,4)));
+		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4)));
 	}
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4, typename P5>
 	inline int constructor(lua_State *L)
 	{
-		return inject<T>(L, new T(read<P1>(L,1), read<P2>(L,2), read<P3>(L,3), read<P4>(L,4), read<P5>(L,5)));
+		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4), read2cpp<P5>(L,5)));
 	}
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
 	inline int constructor(lua_State *L)
 	{
-		return inject<T>(L, new T(read<P1>(L,1), read<P2>(L,2), read<P3>(L,3), read<P4>(L,4), read<P5>(L,5), read<P6>(L,6)));
+		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4), read2cpp<P5>(L,5), read2cpp<P6>(L,6)));
 	}
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
 	inline int constructor(lua_State *L)
 	{
-		return inject<T>(L, new T(read<P1>(L,1), read<P2>(L,2), read<P3>(L,3), read<P4>(L,4), read<P5>(L,5), read<P6>(L,6), read<P7>(L,7)));
+		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4), read2cpp<P5>(L,5), read2cpp<P6>(L,6), read2cpp<P7>(L,7)));
 	}
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
 	inline int constructor(lua_State *L)
 	{
-		return inject<T>(L, new T(read<P1>(L,1), read<P2>(L,2), read<P3>(L,3), read<P4>(L,4), read<P5>(L,5), read<P6>(L,6), read<P7>(L,7), read<P8>(L,8)));
+		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4), read2cpp<P5>(L,5), read2cpp<P6>(L,6), read2cpp<P7>(L,7), read2cpp<P8>(L,8)));
 	}
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
 	inline int constructor(lua_State *L)
 	{
-		return inject<T>(L, new T(read<P1>(L,1), read<P2>(L,2), read<P3>(L,3), read<P4>(L,4), read<P5>(L,5), read<P6>(L,6), read<P7>(L,7), read<P8>(L,8), read<P9>(L,9)));
+		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4), read2cpp<P5>(L,5), read2cpp<P6>(L,6), read2cpp<P7>(L,7), read2cpp<P8>(L,8), read2cpp<P9>(L,9)));
 	}
 
 	template<typename T>
@@ -352,16 +356,8 @@ namespace ELuna
 	}
 
     inline int proxyMethodCall(lua_State *L) {
-        // redirect method call to the real thing
-        //int i = (int)lua_tonumber(L, lua_upvalueindex(1)); // which function?
-        //lua_pushnumber(L, 0);
-        //lua_gettable(L, 1); // get the class table (i.e, self)
-
-       // T** obj = static_cast<T**>(luaL_checkudata(L, -1, ProxyClass<T>::name()));
-       // lua_remove(L, -1); // remove the userdata from the stack
 		GenericMethod* pMethod = (GenericMethod*)lua_touserdata(L, lua_upvalueindex(1));
-		//ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
-        return pMethod->call(L); // execute the thunk
+        return pMethod->call(L); // execute method
     }
 
 	template<typename T>
@@ -453,23 +449,19 @@ namespace ELuna
 		pClass->pushMethod(method);
 	}
 
+
+	///////////////////////////////////////////////////////////////////////////////
+	// bind cpp function 
+	///////////////////////////////////////////////////////////////////////////////
 	struct GenericFunction
 	{
 	public:
 		virtual ~GenericFunction() {};
-		//int PerformCall(CHost* _host, lua_State *L, LuaCustomVariable *_lcv) const;
-		//int MatchParams(lua_State *L, LuaCustomVariable *_lcv) const;
-		//const char* GetVerboseName(lua_State *L) const;
-	
 		GenericFunction() {};
-		//virtual int PerformCallV(CHost* _host, lua_State *L, LuaCustomVariable *_lcv) const;
+
 		virtual int call(lua_State *L) { return 0;};
 		virtual inline const char* getFunctionName(){ return m_name;};
-		//virtual inline void bindClassObj(void* obj) {};
-
 	private:
-		//bool m_IsConst; // method is const?
-		//bool m_IsOperatorMethod; // was current GM binded as .Operator(XXX, &MyClass::SomeMethod) ?
 		const char* m_name;
 	};
 
@@ -523,10 +515,11 @@ namespace ELuna
 		TFUNC m_func;\
 		const char* m_name;\
 		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		~FunctionClass##N() { printf("function releace %s\n", m_name); };\
 		virtual inline const char* getMethodName(){ return m_name;};\
 		virtual int call(lua_State *L)\
 		{\
-			push(L, (*m_func)(ELUNA_READ_PARAM_LIST_##N));\
+			push2lua(L, (*m_func)(ELUNA_READ_PARAM_LIST_##N));\
 			return 1;\
 		};\
 	};
@@ -539,6 +532,7 @@ namespace ELuna
 		TFUNC m_func;\
 		const char* m_name;\
 		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		~FunctionClass##N() { printf("function releace %s\n", m_name); };\
 		virtual inline const char* getMethodName(){ return m_name;};\
 		virtual int call(lua_State *L)\
 		{\
@@ -569,16 +563,464 @@ namespace ELuna
 	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(8)
 	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(9)
 
+	inline int proxyFunctionCall(lua_State *L) {
+		GenericFunction* pFunction = (GenericFunction*)lua_touserdata(L, lua_upvalueindex(1));
+		return pFunction->call(L); // execute function
+	}
+
 	template<typename RL>
-	inline void registerFunction(const char* name, RL (*func)())
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)())
 	{
-		FunctionClass0<RL>* function = new FunctionClass0<RL>(name, func);
+		FunctionClass0<RL>* pFunction = new FunctionClass0<RL>(name, func);
 
 		lua_pushstring(L, name);
-		lua_pushcfunction(L, function->call);
+		lua_pushlightuserdata(L, pFunction);
+		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(function);
+		pushFunction(pFunction);
+	}
+
+	template<typename RL, typename P1>
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1))
+	{
+		FunctionClass1<RL, P1>* pFunction = new FunctionClass1<RL, P1>(name, func);
+
+		lua_pushstring(L, name);
+		lua_pushlightuserdata(L, pFunction);
+		lua_pushcclosure(L, proxyFunctionCall, 1);
+		lua_settable(L, LUA_GLOBALSINDEX);
+
+		pushFunction(pFunction);
+	}
+
+	template<typename RL, typename P1, typename P2>
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2))
+	{
+		FunctionClass2<RL, P1, P2>* pFunction = new FunctionClass2<RL, P1, P2>(name, func);
+
+		lua_pushstring(L, name);
+		lua_pushlightuserdata(L, pFunction);
+		lua_pushcclosure(L, proxyFunctionCall, 1);
+		lua_settable(L, LUA_GLOBALSINDEX);
+
+		pushFunction(pFunction);
+	}
+
+	template<typename RL, typename P1, typename P2, typename P3>
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3))
+	{
+		FunctionClass3<RL, P1, P2, P3>* pFunction = new FunctionClass3<RL, P1, P2, P3>(name, func);
+
+		lua_pushstring(L, name);
+		lua_pushlightuserdata(L, pFunction);
+		lua_pushcclosure(L, proxyFunctionCall, 1);
+		lua_settable(L, LUA_GLOBALSINDEX);
+
+		pushFunction(pFunction);
+	}
+
+	template<typename RL, typename P1, typename P2, typename P3, typename P4>
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4))
+	{
+		FunctionClass4<RL, P1, P2, P3, P4>* pFunction = new FunctionClass4<RL, P1, P2, P3, P4>(name, func);
+
+		lua_pushstring(L, name);
+		lua_pushlightuserdata(L, pFunction);
+		lua_pushcclosure(L, proxyFunctionCall, 1);
+		lua_settable(L, LUA_GLOBALSINDEX);
+
+		pushFunction(pFunction);
+	}
+
+	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5>
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5))
+	{
+		FunctionClass5<RL, P1, P2, P3, P4, P5>* pFunction = new FunctionClass5<RL, P1, P2, P3, P4, P5>(name, func);
+
+		lua_pushstring(L, name);
+		lua_pushlightuserdata(L, pFunction);
+		lua_pushcclosure(L, proxyFunctionCall, 1);
+		lua_settable(L, LUA_GLOBALSINDEX);
+
+		pushFunction(pFunction);
+	}
+
+	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6))
+	{
+		FunctionClass6<RL, P1, P2, P3, P4, P5, P6>* pFunction = new FunctionClass6<RL, P1, P2, P3, P4, P5, P6>(name, func);
+
+		lua_pushstring(L, name);
+		lua_pushlightuserdata(L, pFunction);
+		lua_pushcclosure(L, proxyFunctionCall, 1);
+		lua_settable(L, LUA_GLOBALSINDEX);
+
+		pushFunction(pFunction);
+	}
+
+	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7))
+	{
+		FunctionClass7<RL, P1, P2, P3, P4, P5, P6, P7>* pFunction = new FunctionClass7<RL, P1, P2, P3, P4, P5, P6, P7>(name, func);
+
+		lua_pushstring(L, name);
+		lua_pushlightuserdata(L, pFunction);
+		lua_pushcclosure(L, proxyFunctionCall, 1);
+		lua_settable(L, LUA_GLOBALSINDEX);
+
+		pushFunction(pFunction);
+	}
+
+	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7, P8))
+	{
+		FunctionClass8<RL, P1, P2, P3, P4, P5, P6, P7, P8>* pFunction = new FunctionClass8<RL, P1, P2, P3, P4, P5, P6, P7, P8>(name, func);
+
+		lua_pushstring(L, name);
+		lua_pushlightuserdata(L, pFunction);
+		lua_pushcclosure(L, proxyFunctionCall, 1);
+		lua_settable(L, LUA_GLOBALSINDEX);
+
+		pushFunction(pFunction);
+	}
+
+	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9))
+	{
+		FunctionClass9<RL, P1, P2, P3, P4, P5, P6, P7, P8, P9>* pFunction = new FunctionClass9<RL, P1, P2, P3, P4, P5, P6, P7, P8, P9>(name, func);
+
+		lua_pushstring(L, name);
+		lua_pushlightuserdata(L, pFunction);
+		lua_pushcclosure(L, proxyFunctionCall, 1);
+		lua_settable(L, LUA_GLOBALSINDEX);
+
+		pushFunction(pFunction);
+	}
+
+	void traceStack(lua_State* L, int n)
+	{
+		lua_Debug ar;
+		if(lua_getstack(L, n, &ar))
+		{
+			lua_getinfo(L, "Sln", &ar);
+
+			if(ar.name) {
+				printf("\tstack[%d] -> %s(): entry line %d [%s : line %d]\n", n, ar.name, ar.currentline, ar.short_src, ar.linedefined);
+			} else {
+				printf("\tstack[%d] -> unknown: entry line %d [%s : line %d]\n", n, ar.currentline, ar.short_src, ar.linedefined);
+			}
+
+			traceStack(L, n+1);
+		}
+	}
+
+	int error_log(lua_State *L)
+	{
+		printf("error : %s\n", lua_tostring(L, -1));
+
+		traceStack(L, 0);
+
+		return 0; 
+	}
+
+	///////////////////////////////////////////////////////////////////////////////
+	// bind lua function 
+	///////////////////////////////////////////////////////////////////////////////
+	template<typename RL>
+	struct LuaFunction
+	{
+	public:
+		LuaFunction(lua_State* L, const char* funcName): m_luaState(L), m_name(funcName) {
+			printf("Lua Function : %s\n", funcName);
+			lua_pushstring(L, funcName);
+			lua_gettable(L, LUA_GLOBALSINDEX);
+			if (lua_isfunction(L, -1)) {
+				m_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+			} else {
+				printf("%s is not a lua function!\n", funcName);
+				assert(0);
+			}
+		};
+		~LuaFunction() {};
+
+		RL operator()()
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			lua_pcall(m_luaState, 0, 1, errLogIndex);
+
+			return read2cpp<RL>(m_luaState, -1);
+		}
+
+		template<typename P1>
+		RL operator()(P1 p1)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1);
+			lua_pcall(m_luaState, 1, 1, errLogIndex);
+
+			return read2cpp<RL>(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2>
+		RL operator()(P1 p1, P2 p2)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2);
+			lua_pcall(m_luaState, 2, 1, errLogIndex);
+
+			return read2cpp<RL>(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3>
+		RL operator()(P1 p1, P2 p2, P3 p3)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3);
+			lua_pcall(m_luaState, 3, 1, errLogIndex);
+
+			return read2cpp<RL>(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4>
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4);
+			lua_pcall(m_luaState, 4, 1, errLogIndex);
+
+			return read2cpp<RL>(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5>
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5);
+			lua_pcall(m_luaState, 5, 1, errLogIndex);
+
+			return read2cpp<RL>(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6);
+			lua_pcall(m_luaState, 6, 1, errLogIndex);
+
+			return read2cpp<RL>(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6); push2lua(m_luaState, p7);
+			lua_pcall(m_luaState, 7, 1, errLogIndex);
+
+			return read2cpp<RL>(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6); push2lua(m_luaState, p7); push2lua(m_luaState, p8);
+			lua_pcall(m_luaState, 8, 1, errLogIndex);
+
+			return read2cpp<RL>(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6); push2lua(m_luaState, p7); push2lua(m_luaState, p8); push2lua(m_luaState, p9);
+			lua_pcall(m_luaState, 9, 1, errLogIndex);
+
+			return read2cpp<RL>(m_luaState, -1);
+		}
+
+	private:
+		int m_ref;
+		const char* m_name;
+		lua_State* m_luaState;
+	};
+
+	template<>
+	struct LuaFunction<void>
+	{
+	public:
+		LuaFunction(lua_State* L, const char* funcName): m_luaState(L), m_name(funcName) {
+			printf("Lua Function : %s\n", funcName);
+			lua_pushstring(L, funcName);
+			lua_gettable(L, LUA_GLOBALSINDEX);
+			if (lua_isfunction(L, -1)) {
+				m_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+			} else {
+				printf("%s is not a lua function!\n", funcName);
+				assert(0);
+			}
+		};
+
+		~LuaFunction() {};
+
+		void operator()()
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			lua_pcall(m_luaState, 0, 1, errLogIndex);
+		}
+
+		template<typename P1>
+		void operator()(P1 p1)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1);
+			lua_pcall(m_luaState, 1, 1, errLogIndex);
+		}
+
+		template<typename P1, typename P2>
+		void operator()(P1 p1, P2 p2)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2);
+			lua_pcall(m_luaState, 2, 1, errLogIndex);
+		}
+
+		template<typename P1, typename P2, typename P3>
+		void operator()(P1 p1, P2 p2, P3 p3)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3);
+			lua_pcall(m_luaState, 3, 1, errLogIndex);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4>
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4);
+			lua_pcall(m_luaState, 4, 1, errLogIndex);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5>
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5);
+			lua_pcall(m_luaState, 5, 1, errLogIndex);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6);
+			lua_pcall(m_luaState, 6, 1, errLogIndex);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6); push2lua(m_luaState, p7);
+			lua_pcall(m_luaState, 7, 1, errLogIndex);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6); push2lua(m_luaState, p7); push2lua(m_luaState, p8);
+			lua_pcall(m_luaState, 8, 1, errLogIndex);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9)
+		{
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int errLogIndex = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6); push2lua(m_luaState, p7); push2lua(m_luaState, p8); push2lua(m_luaState, p9);
+			lua_pcall(m_luaState, 9, 1, errLogIndex);
+		}
+
+	private:
+		int m_ref;
+		const char* m_name;
+		lua_State* m_luaState;
+	};
+
+	void doFile(lua_State *L, const char *fileName)
+	{
+		lua_pushcclosure(L, error_log, 0);
+		int errLogIndex = lua_gettop(L);
+
+		if(luaL_loadfile(L, fileName) == 0)
+		{
+			lua_pcall(L, 0, 0, errLogIndex);
+		} else {
+			printf("dofile error: %s", lua_tostring(L, -1));
+		}
 	}
 
 	lua_State* openLua() {

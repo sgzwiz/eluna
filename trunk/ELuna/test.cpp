@@ -128,34 +128,65 @@ public:
 	}
 };
 
+void foo() {
+	printf("hello world\n");
+}
 
-int initLua(lua_State *L) {
-    printf("------------start initLua--------------\n");
+void foo1(int a) {
+	printf("hello world %d\n", a);
+}
+
+
+int initMethod(lua_State *L) {
+    printf("------------start initMethod--------------\n");
 	ELuna::registerClass<Monster>(L, "Monster", ELuna::constructor<Monster, char *>);
 	ELuna::registerMethod<Monster>("speak", &Monster::speak);
 	ELuna::registerMethod<Monster>("speak1", &Monster::speak1);
 	ELuna::registerMethod<Monster>("getOld", &Monster::getOld);
 	ELuna::registerMethod<Monster>("setOld", &Monster::setOld);
 	ELuna::registerMethod<Monster>("getName", &Monster::getName);
-	printf("------------end initLua--------------\n");
+	printf("------------end initMethod--------------\n");
 
 	return 0;
 }
 
-const char *filename = "test.lua";
+int initFunction(lua_State *L) {
+	printf("------------start initFunction--------------\n");
+	ELuna::registerFunction(L, "foo", &foo);
+	ELuna::registerFunction(L, "foo1", &foo1);
+	printf("------------end initFunction--------------\n");
+
+	return 0;
+}
+
+int testLuaFunction(lua_State* L) {
+	ELuna::LuaFunction<int> luaFoo1(L, "luaFoo1");
+	printf("Lua function run\n");
+	int a = luaFoo1("testlua");
+	printf("luaFoo1 result: %d\n", a);
+	ELuna::LuaFunction<void> luaFoo2(L, "luaFoo2");
+	printf("Lua function run\n");
+	luaFoo2(1, 2);
+
+	return 0;
+}
+
+const char *fileName = "test.lua";
 
 int main()
 {	
 	lua_State *L = ELuna::openLua();
 
-    initLua(L);
-    printf("luaL_loadfile %s!\n", filename);
+    initMethod(L);
+	initFunction(L);
 
-	if (luaL_loadfile(L, filename) || lua_pcall(L, 0, 0, 0))
-    	printf("cannot run configuration file: %s", lua_tostring(L, -1));
+    printf("luaL_loadfile %s!\n", fileName);
+
+	ELuna::doFile(L, fileName);
 
 	printf("lua executed!\n");
 
+	testLuaFunction(L);
 	ELuna::closeLua(L);
 	
 	printf(" close !\n");

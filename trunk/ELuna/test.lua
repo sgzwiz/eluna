@@ -31,6 +31,27 @@ print("--------------------test------------------------")
 --print("monster1 old: ", old, monster1, monster1[0])
 print("monster old: ", monster:getOld())
 print("monster1 old: ", monster1:getOld())
+
+foo()
+foo1()
+function luaFoo1(str)
+	print("this is luaFoo1", str);
+	return 1001
+end
+
+function stack2()
+	a = b + c
+end
+
+function stack1()
+	stack2()
+end
+
+function luaFoo2(a, b)
+	print("this is luaFoo2", a + b);
+	stack1()
+end
+
 print("-------------------end-----------------------")
 
 
