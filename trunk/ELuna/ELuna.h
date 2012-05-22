@@ -1,7 +1,16 @@
 // Copyright (c) 2012 rick
 //
 // ELuna - Extense Luna
-/////////////////////////////////////////////////////////////////////
+// ELuna is a simple library to bind C/C++ and lua. It just depend on lua library
+// so it is clear and light. You can include ELuna and lua in your project to use.
+// Eluna provides some simple interface, which hides the stack operations for you.  
+// You can use it easily to register cpp method, cpp function, lua function and so 
+// on.
+// Eluna's basic idea derives from luna, so it's not to use matetable to find method
+// but copy all method to object's table.
+//
+// mail: radiotail86@gmail.com
+///////////////////////////////////////////////////////////////////////////////////////////
 
 
 #ifndef _LUA_ELUNA_H_
@@ -14,9 +23,9 @@
 #include <assert.h>
 
 extern "C" {
-#include "..\lua\lua.h"
-#include "..\lua\lualib.h"
-#include "..\lua\lauxlib.h"
+	#include "..\lua\lua.h"
+	#include "..\lua\lualib.h"
+	#include "..\lua\lauxlib.h"
 }
 
 namespace ELuna
@@ -106,16 +115,16 @@ namespace ELuna
 	#define ELUNA_PARAM_LIST_7 ELUNA_PARAM_LIST_6, P7
 	#define ELUNA_PARAM_LIST_8 ELUNA_PARAM_LIST_7, P8
 	#define ELUNA_PARAM_LIST_9 ELUNA_PARAM_LIST_8, P9
-	#define ELUNA_READ_PARAM_LIST_0
-	#define ELUNA_READ_PARAM_LIST_1 ELUNA_READ_PARAM_LIST_0  read2cpp<P1>(L,2)
-	#define ELUNA_READ_PARAM_LIST_2 ELUNA_READ_PARAM_LIST_1, read2cpp<P2>(L,3)
-	#define ELUNA_READ_PARAM_LIST_3 ELUNA_READ_PARAM_LIST_2, read2cpp<P3>(L,4)
-	#define ELUNA_READ_PARAM_LIST_4 ELUNA_READ_PARAM_LIST_3, read2cpp<P4>(L,5)
-	#define ELUNA_READ_PARAM_LIST_5 ELUNA_READ_PARAM_LIST_4, read2cpp<P5>(L,6)
-	#define ELUNA_READ_PARAM_LIST_6 ELUNA_READ_PARAM_LIST_5, read2cpp<P6>(L,7)
-	#define ELUNA_READ_PARAM_LIST_7 ELUNA_READ_PARAM_LIST_6, read2cpp<P7>(L,8)
-	#define ELUNA_READ_PARAM_LIST_8 ELUNA_READ_PARAM_LIST_7, read2cpp<P8>(L,9)
-	#define ELUNA_READ_PARAM_LIST_9 ELUNA_READ_PARAM_LIST_8, read2cpp<P9>(L,10)
+	#define ELUNA_READ_METHOD_PARAM_LIST_0
+	#define ELUNA_READ_METHOD_PARAM_LIST_1 ELUNA_READ_METHOD_PARAM_LIST_0  read2cpp<P1>(L,2)
+	#define ELUNA_READ_METHOD_PARAM_LIST_2 ELUNA_READ_METHOD_PARAM_LIST_1, read2cpp<P2>(L,3)
+	#define ELUNA_READ_METHOD_PARAM_LIST_3 ELUNA_READ_METHOD_PARAM_LIST_2, read2cpp<P3>(L,4)
+	#define ELUNA_READ_METHOD_PARAM_LIST_4 ELUNA_READ_METHOD_PARAM_LIST_3, read2cpp<P4>(L,5)
+	#define ELUNA_READ_METHOD_PARAM_LIST_5 ELUNA_READ_METHOD_PARAM_LIST_4, read2cpp<P5>(L,6)
+	#define ELUNA_READ_METHOD_PARAM_LIST_6 ELUNA_READ_METHOD_PARAM_LIST_5, read2cpp<P6>(L,7)
+	#define ELUNA_READ_METHOD_PARAM_LIST_7 ELUNA_READ_METHOD_PARAM_LIST_6, read2cpp<P7>(L,8)
+	#define ELUNA_READ_METHOD_PARAM_LIST_8 ELUNA_READ_METHOD_PARAM_LIST_7, read2cpp<P8>(L,9)
+	#define ELUNA_READ_METHOD_PARAM_LIST_9 ELUNA_READ_METHOD_PARAM_LIST_8, read2cpp<P9>(L,10)
 
 	struct GenericMethod
 	{
@@ -145,7 +154,7 @@ namespace ELuna
 			lua_pushnumber(L, 0);\
 			lua_rawget(L, 1); \
 			T** obj = (T**)lua_touserdata(L, -1);\
-			push2lua(L, ((*obj)->*(m_func))(ELUNA_READ_PARAM_LIST_##N));\
+			push2lua(L, ((*obj)->*(m_func))(ELUNA_READ_METHOD_PARAM_LIST_##N));\
 			return 1;\
 		};\
 	};
@@ -165,7 +174,7 @@ namespace ELuna
 			lua_pushnumber(L, 0);\
 			lua_rawget(L, 1);\
 			T** obj = (T**)lua_touserdata(L, -1);\
-			((*obj)->*(m_func))(ELUNA_READ_PARAM_LIST_##N);\
+			((*obj)->*(m_func))(ELUNA_READ_METHOD_PARAM_LIST_##N);\
 			return 0;\
 		};\
 	};
@@ -506,6 +515,16 @@ namespace ELuna
 	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_7 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_6, P7
 	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_8 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_7, P8
 	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_9 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_8, P9
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_0
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_1 ELUNA_READ_FUNCTION_PARAM_LIST_0  read2cpp<P1>(L,1)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_2 ELUNA_READ_FUNCTION_PARAM_LIST_1, read2cpp<P2>(L,2)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_3 ELUNA_READ_FUNCTION_PARAM_LIST_2, read2cpp<P3>(L,3)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_4 ELUNA_READ_FUNCTION_PARAM_LIST_3, read2cpp<P4>(L,4)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_5 ELUNA_READ_FUNCTION_PARAM_LIST_4, read2cpp<P5>(L,5)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_6 ELUNA_READ_FUNCTION_PARAM_LIST_5, read2cpp<P6>(L,6)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_7 ELUNA_READ_FUNCTION_PARAM_LIST_6, read2cpp<P7>(L,7)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_8 ELUNA_READ_FUNCTION_PARAM_LIST_7, read2cpp<P8>(L,8)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_9 ELUNA_READ_FUNCTION_PARAM_LIST_8, read2cpp<P9>(L,9)
 	
 	#define ELUNA_MAKE_FUNCTIONCLASSX(N)\
 	template<ELUNA_FUNCTIONCLASSX_PARAM_LIST_##N >\
@@ -519,7 +538,7 @@ namespace ELuna
 		virtual inline const char* getMethodName(){ return m_name;};\
 		virtual int call(lua_State *L)\
 		{\
-			push2lua(L, (*m_func)(ELUNA_READ_PARAM_LIST_##N));\
+			push2lua(L, (*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N));\
 			return 1;\
 		};\
 	};
@@ -536,7 +555,7 @@ namespace ELuna
 		virtual inline const char* getMethodName(){ return m_name;};\
 		virtual int call(lua_State *L)\
 		{\
-			(*m_func)(ELUNA_READ_PARAM_LIST_##N);\
+			(*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N);\
 			return 0;\
 		};\
 	};
@@ -731,6 +750,7 @@ namespace ELuna
 	struct LuaFunction
 	{
 	public:
+		~LuaFunction() {};
 		LuaFunction(lua_State* L, const char* funcName): m_luaState(L), m_name(funcName) {
 			printf("Lua Function : %s\n", funcName);
 			lua_pushstring(L, funcName);
@@ -742,7 +762,6 @@ namespace ELuna
 				assert(0);
 			}
 		};
-		~LuaFunction() {};
 
 		RL operator()()
 		{
@@ -1026,8 +1045,8 @@ namespace ELuna
 	lua_State* openLua() {
 		lua_State *L = lua_open();
 
-		luaopen_base(L);           // 加载Lua基本库
-		luaL_openlibs(L);          // 加载Lua通用扩展库
+		luaopen_base(L);          
+		luaL_openlibs(L);          
 		luaopen_debug(L);
 
 		return L;
