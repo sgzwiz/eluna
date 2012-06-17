@@ -30,7 +30,9 @@ extern "C" {
 
 namespace ELuna
 {
-
+	///////////////////////////////////////////////////////////////////////////////
+	// lua's string type
+	///////////////////////////////////////////////////////////////////////////////
 	struct LuaString
 	{
 		const char* str;
@@ -38,10 +40,235 @@ namespace ELuna
 	};
 
 	///////////////////////////////////////////////////////////////////////////////
+	// this is a table reference count
+	///////////////////////////////////////////////////////////////////////////////
+	struct TableRefCount
+	{
+
+		TableRefCount(lua_State* L): m_refCount(1) {}
+		~TableRefCount() {};
+
+		inline void incRef() { ++m_refCount;}
+		inline int  decRef() { return --m_refCount; }
+
+		int	m_refCount;
+	};
+
+	///////////////////////////////////////////////////////////////////////////////
+	// lua's table type
+	///////////////////////////////////////////////////////////////////////////////
+	struct LuaTable
+	{
+		LuaTable(): m_luaState(NULL), m_refCount(NULL), m_tableAdd(NULL) {} ;
+
+		LuaTable(lua_State* L) {
+			lua_newtable(L);
+			m_luaState = L;
+			m_stackPos = lua_gettop(L);
+			m_tableAdd = lua_topointer(L, -1);
+			m_refCount = new TableRefCount(L);
+		}
+
+		LuaTable(LuaTable const& rhs) {
+			m_refCount = rhs.m_refCount;
+			m_luaState = rhs.m_luaState;
+			m_tableAdd = rhs.m_tableAdd;
+			m_stackPos = rhs.m_stackPos;
+
+			if(m_refCount) m_refCount->incRef();
+		}
+
+		LuaTable& operator=(const LuaTable& rhs) {
+			releaseRef();
+
+			m_refCount = rhs.m_refCount;
+			m_luaState = rhs.m_luaState;
+			m_tableAdd = rhs.m_tableAdd;
+			m_stackPos = rhs.m_stackPos;
+
+			if(m_refCount) m_refCount->incRef();
+
+			return *this;
+		}
+
+		LuaTable(lua_State* L, int index) {
+			if(index < 0) {
+				index = lua_gettop(L) + index + 1;
+			}
+
+			m_luaState = L;
+			m_stackPos = index;
+			m_tableAdd = lua_topointer(L, index);
+			m_refCount = new TableRefCount(L);
+		}
+
+		// bind Lua Talbe
+		LuaTable(lua_State* L, const char* name) {
+			lua_pushstring(L, name);
+			lua_gettable(L, LUA_GLOBALSINDEX);
+
+			if (lua_istable(L, -1)) {
+				m_luaState = L;
+				m_stackPos = lua_gettop(L);
+				m_tableAdd = lua_topointer(L, -1);
+				m_refCount = new TableRefCount(L);
+			} else {
+				printf("%s is not a lua table!\n", name);
+				assert(0);
+			}
+		}
+
+		~LuaTable() { 
+			releaseRef();
+
+			m_luaState = NULL;
+			m_tableAdd = NULL;
+		}
+
+		inline void releaseRef() {
+			if(m_refCount) {
+				if (!m_refCount->decRef()) {
+					if (isValid()) lua_remove(m_luaState, m_stackPos);
+
+					delete m_refCount;
+				}
+			}
+
+			m_refCount = NULL;
+		}
+
+		inline bool isValid() {
+			if(m_tableAdd) {
+				if(m_tableAdd == lua_topointer(m_luaState, m_stackPos))
+					return true;
+			}
+
+			return false;
+		}
+
+		template<typename K,typename V>
+		inline void set(const K& key, const V& value) {
+			if ( isValid() ) {
+				push2lua(m_luaState, key); push2lua(m_luaState, value);
+				lua_settable(m_luaState, m_stackPos);
+			}
+		}
+
+		template<typename V>
+		inline void set(const int key, const V& value) {
+			if ( isValid() ) {
+				lua_pushnumber(m_luaState, key); push2lua(m_luaState, value);
+				lua_settable(m_luaState, m_stackPos);
+			}
+		}
+
+		template<typename V>
+		inline void set(const char* key, const V& value) {
+			if ( isValid() ) {
+				lua_pushstring(m_luaState, key); push2lua(m_luaState, value);
+				lua_settable(m_luaState, m_stackPos);
+			}
+		}
+
+		template<typename K,typename V>
+		inline V get(const K& key) {
+			if ( isValid() ) {
+				push2lua(m_luaState, key);
+				lua_gettable(m_luaState, m_stackPos);
+			} else {
+				lua_pushnil(m_luaState);
+			}
+
+			V result = read2cpp<V>(m_luaState, -1);
+			lua_pop(m_luaState, 1);
+			return result;
+		}
+
+		template<typename V>
+		inline V get(int key) {
+			if(isValid()) {
+				lua_pushnumber(m_luaState, key);
+				lua_gettable(m_luaState, m_stackPos);
+			} else {
+				lua_pushnil(m_luaState);
+			}
+
+			V result = read2cpp<V>(m_luaState, -1);
+			lua_pop(m_luaState, 1);
+			return result;
+		}
+
+		template<typename V>
+		inline V get(const char* key) {
+			if(isValid()) {
+				lua_pushstring(m_luaState, key);
+				lua_gettable(m_luaState, m_stackPos);
+			} else {
+				lua_pushnil(m_luaState);
+			}
+
+			V result = read2cpp<V>(m_luaState, -1);
+			lua_pop(m_luaState, 1);
+			return result;
+		}
+
+		template<typename K>
+		inline LuaTable get(const K& key) {
+			if ( isValid() ) {
+				push2lua(m_luaState, key);
+				lua_gettable(m_luaState, m_stackPos);
+			} else {
+				lua_pushnil(m_luaState);
+			}
+
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<>
+		inline LuaTable get(int key) {
+			if(isValid()) {
+				lua_pushnumber(m_luaState, key);
+				lua_gettable(m_luaState, m_stackPos);
+			} else {
+				lua_pushnil(m_luaState);
+			}
+
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<>
+		inline LuaTable get(const char* key) {
+			if(isValid()) {
+				lua_pushstring(m_luaState, key);
+				lua_gettable(m_luaState, m_stackPos);
+			} else {
+				lua_pushnil(m_luaState);
+			}
+
+			return LuaTable(m_luaState, -1);
+		}
+
+		int	m_stackPos;
+		TableRefCount* m_refCount;
+		const void*	m_tableAdd;
+		lua_State*	m_luaState;
+	};
+
+	///////////////////////////////////////////////////////////////////////////////
 	// read a value from lua to cpp
 	///////////////////////////////////////////////////////////////////////////////
-	template<typename T> inline T   read2cpp(lua_State *L, int index) { printf("param type error!\n"); assert(0);};
-	template<>	inline bool         read2cpp(lua_State *L, int index) { if(lua_isboolean(L, index)) return lua_toboolean(L, index) != 0; else return lua_tonumber(L, index) != 0;};
+	template<typename T>
+	struct convert2CppType { static T convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
+
+	template<typename T>
+	struct convert2CppType<T*> { static T* convertType(lua_State* L, int index){ return *(T**)lua_touserdata(L, index);} };
+
+	template<typename T>
+	struct convert2CppType<T&> { static T& convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
+
+	template<typename T> inline T   read2cpp(lua_State *L, int index) { return convert2CppType<T>::convertType(L, index);};
+	template<>	inline void			read2cpp(lua_State *L, int index) {}; 
+	template<>	inline bool         read2cpp(lua_State *L, int index) { return lua_toboolean(L, -1) ? true : false;};
 	template<>	inline char*		read2cpp(lua_State *L, int index) { return (char*)lua_tostring(L, index); };
 	template<>	inline const char*	read2cpp(lua_State *L, int index) { return (const char*)lua_tostring(L, index);};
 	template<>	inline char			read2cpp(lua_State *L, int index) { return (char)lua_tonumber(L, index);};
@@ -56,14 +283,46 @@ namespace ELuna
 	template<>  inline unsigned long long  read2cpp(lua_State *L, int index) { return (unsigned long long)lua_tonumber(L, index);};
 	template<>	inline float		read2cpp(lua_State *L, int index) { return (float)lua_tonumber(L, index);};
 	template<>	inline double		read2cpp(lua_State *L, int index) { return (double)lua_tonumber(L, index);};
-	template<>	inline void			read2cpp(lua_State *L, int index) { return;}; 
-	//template<>	table				read2cpp(lua_State *L, int index);
 	template<>	inline LuaString	read2cpp(lua_State *L, int index) { LuaString ls; ls.str = (char*)lua_tolstring(L, index, &ls.len); return ls;};
+	template<>	inline LuaTable	    read2cpp(lua_State *L, int index) { return LuaTable(L, index);};
 	
 	///////////////////////////////////////////////////////////////////////////////
 	// push a value from cpp to lua
 	///////////////////////////////////////////////////////////////////////////////
-	template<typename T> inline void push2lua(lua_State *L, T ret) { printf("return type error!\n"); assert(0);};
+	template<typename T>
+	struct convert2LuaType {  
+		static void convertType(lua_State* L, T& ret){
+			T** ud = (T**)lua_newuserdata(L, sizeof(T*)); 
+			*ud = new T(ret);
+
+			luaL_getmetatable(L, ProxyClass::className<T>());
+			lua_setmetatable(L, -2);
+		}
+	};
+
+	template<typename T>
+	struct convert2LuaType<T*> { 
+		static void convertType(lua_State* L, T* ret){ 
+			T** ud = (T**)lua_newuserdata(L, sizeof(T*)); 
+			*ud = ret;
+
+			luaL_getmetatable(L, ProxyClass::className<T>());
+			lua_setmetatable(L, -2);
+		}
+	};
+
+	template<typename T>
+	struct convert2LuaType<T&> {
+		static void convertType(lua_State* L, T& ret){ 
+			T** ud = (T**)lua_newuserdata(L, sizeof(T*)); 
+			*ud = &ret;
+
+			luaL_getmetatable(L, ProxyClass::className<T>());
+			lua_setmetatable(L, -2);
+		}
+	};
+
+	template<typename T> inline void push2lua(lua_State *L, T ret) { convert2LuaType<T>::convertType(L, ret);};
 	template<> inline void push2lua(lua_State *L, char ret) { lua_pushnumber(L, ret);};
 	template<> inline void push2lua(lua_State *L, unsigned char ret) { lua_pushnumber(L, ret);};
 	template<> inline void push2lua(lua_State *L, short ret) { lua_pushnumber(L, ret);};
@@ -80,6 +339,7 @@ namespace ELuna
 	template<> inline void push2lua(lua_State *L, long long ret) { return lua_pushnumber(L, (LUA_NUMBER)ret);};
 	template<> inline void push2lua(lua_State *L, unsigned long long ret) { return lua_pushnumber(L, (LUA_NUMBER)ret);};
 	template<> inline void push2lua(lua_State *L, LuaString ret) {lua_pushlstring(L, ret.str, ret.len);};
+	template<> inline void push2lua(lua_State *L, LuaTable ret) { if(ret.m_refCount) lua_pushvalue(L, ret.m_stackPos); else lua_pushnil(L);};
 
 
 	///////////////////////////////////////////////////////////////////////////////
@@ -149,8 +409,7 @@ namespace ELuna
 		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~MethodClass##N(){};\
 		virtual inline const char* getMethodName(){ return m_name;};\
-		virtual int call(lua_State *L)\
-		{\
+		virtual int call(lua_State *L) {\
 			lua_pushnumber(L, 0);\
 			lua_rawget(L, 1); \
 			T** obj = (T**)lua_touserdata(L, -1);\
@@ -169,8 +428,7 @@ namespace ELuna
 		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~MethodClass##N(){};\
 		virtual inline const char* getMethodName(){ return m_name;};\
-		virtual int call(lua_State *L)\
-		{\
+		virtual int call(lua_State *L) {\
 			lua_pushnumber(L, 0);\
 			lua_rawget(L, 1);\
 			T** obj = (T**)lua_touserdata(L, -1);\
@@ -208,8 +466,7 @@ namespace ELuna
 	public:
 		ProxyClass(){};
 		~ProxyClass() {
-			for (Method_Vector::iterator itr = m_methods.begin(); itr != m_methods.end(); ++itr)
-			{
+			for (Method_Vector::iterator itr = m_methods.begin(); itr != m_methods.end(); ++itr) {
 				delete *itr;
 			}
 		}
@@ -219,8 +476,7 @@ namespace ELuna
 		inline void pushMethod(GenericMethod* method) { m_methods.push_back(method);};
 		
 		template<typename T>
-		static inline const char* className(const char* name = NULL)
-		{
+		static inline const char* className(const char* name = NULL) {
 			static const char* _name;
 			if(name) _name = name;
 			return _name;
@@ -264,63 +520,53 @@ namespace ELuna
     }
 
 	template<typename T>
-	inline int constructor(lua_State *L)
-	{   
+	inline int constructor(lua_State *L) {   
 		return inject<T>(L, new T());
 	}
 
     template<typename T, typename P1>
-    inline int constructor(lua_State *L)
-    {   
+    inline int constructor(lua_State *L) {   
         return inject<T>(L, new T(read2cpp<P1>(L,1)));
     }
 
     template<typename T, typename P1, typename P2>
-    inline int constructor(lua_State *L)
-    {
-        return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2)));
+    inline int constructor(lua_State *L) {
+        return inject<T>(L, new T(read2cpp<P1>(L, 1), read2cpp<P2>(L, 2)));
     }
 
     template<typename T, typename P1, typename P2, typename P3>
-    inline int constructor(lua_State *L)
-    {
-        return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3)));
+    inline int constructor(lua_State *L) {
+        return inject<T>(L, new T(read2cpp<P1>(L, 1), read2cpp<P2>(L, 2), read2cpp<P3>(L, 3)));
     }
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4>
-	inline int constructor(lua_State *L)
-	{
-		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4)));
+	inline int constructor(lua_State *L) {
+		return inject<T>(L, new T(read2cpp<P1>(L, 1), read2cpp<P2>(L, 2), read2cpp<P3>(L, 3), read2cpp<P4>(L, 4)));
 	}
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4, typename P5>
-	inline int constructor(lua_State *L)
-	{
-		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4), read2cpp<P5>(L,5)));
+	inline int constructor(lua_State *L) {
+		return inject<T>(L, new T(read2cpp<P1>(L, 1), read2cpp<P2>(L, 2), read2cpp<P3>(L, 3), read2cpp<P4>(L, 4), read2cpp<P5>(L, 5)));
 	}
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-	inline int constructor(lua_State *L)
-	{
-		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4), read2cpp<P5>(L,5), read2cpp<P6>(L,6)));
+	inline int constructor(lua_State *L) {
+		return inject<T>(L, new T(read2cpp<P1>(L, 1), read2cpp<P2>(L, 2), read2cpp<P3>(L, 3), read2cpp<P4>(L, 4), read2cpp<P5>(L, 5), read2cpp<P6>(L, 6)));
 	}
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
-	inline int constructor(lua_State *L)
-	{
-		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4), read2cpp<P5>(L,5), read2cpp<P6>(L,6), read2cpp<P7>(L,7)));
+	inline int constructor(lua_State *L) {
+		return inject<T>(L, new T(read2cpp<P1>(L, 1), read2cpp<P2>(L, 2), read2cpp<P3>(L, 3), read2cpp<P4>(L, 4), read2cpp<P5>(L, 5), read2cpp<P6>(L, 6), read2cpp<P7>(L, 7)));
 	}
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
-	inline int constructor(lua_State *L)
-	{
-		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4), read2cpp<P5>(L,5), read2cpp<P6>(L,6), read2cpp<P7>(L,7), read2cpp<P8>(L,8)));
+	inline int constructor(lua_State *L) {
+		return inject<T>(L, new T(read2cpp<P1>(L, 1), read2cpp<P2>(L, 2), read2cpp<P3>(L, 3), read2cpp<P4>(L, 4), read2cpp<P5>(L, 5), read2cpp<P6>(L, 6), read2cpp<P7>(L, 7), read2cpp<P8>(L, 8)));
 	}
 
 	template<typename T, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
-	inline int constructor(lua_State *L)
-	{
-		return inject<T>(L, new T(read2cpp<P1>(L,1), read2cpp<P2>(L,2), read2cpp<P3>(L,3), read2cpp<P4>(L,4), read2cpp<P5>(L,5), read2cpp<P6>(L,6), read2cpp<P7>(L,7), read2cpp<P8>(L,8), read2cpp<P9>(L,9)));
+	inline int constructor(lua_State *L) {
+		return inject<T>(L, new T(read2cpp<P1>(L, 1), read2cpp<P2>(L, 2), read2cpp<P3>(L, 3), read2cpp<P4>(L, 4), read2cpp<P5>(L, 5), read2cpp<P6>(L, 6), read2cpp<P7>(L, 7), read2cpp<P8>(L, 8), read2cpp<P9>(L, 9)));
 	}
 
 	template<typename T>
@@ -329,8 +575,8 @@ namespace ELuna
 
 		lua_pushnumber(L, 0);
 
-		T** a = static_cast<T**>(lua_newuserdata(L, sizeof(T*))); // store a ptr to the ptr
-		*a = obj; // set the ptr to the ptr to point to the ptr... >.>
+		T** ud = static_cast<T**>(lua_newuserdata(L, sizeof(T*))); // store a ptr to the ptr
+		*ud = obj; // set the ptr to the ptr to point to the ptr... >.>
 
 		const char* className = ProxyClass::className<T>();
 		luaL_getmetatable(L, className);
@@ -365,80 +611,70 @@ namespace ELuna
     }
 
 	template<typename T, typename RL>
-	inline void registerMethod(const char* name, RL (T::*func)())
-	{
+	inline void registerMethod(const char* name, RL (T::*func)()) {
 		MethodClass0<RL, T>* method = new MethodClass0<RL, T>(name, func);
 		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
     template<typename T, typename RL, typename P1>
-	inline void registerMethod(const char* name, RL (T::*func)(P1))
-	{
+	inline void registerMethod(const char* name, RL (T::*func)(P1)) {
 		MethodClass1<RL, T, P1>* method = new MethodClass1<RL, T, P1>(name, func);
 		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
     }
 
 	template<typename T, typename RL, typename P1, typename P2>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2))
-	{
+	inline void registerMethod(const char* name, RL (T::*func)(P1, P2)) {
 		MethodClass2<RL, T, P1, P2>* method = new MethodClass2<RL, T, P1, P2>(name, func);
 		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3))
-	{
+	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3)) {
 		MethodClass3<RL, T, P1, P2, P3>* method = new MethodClass3<RL, T, P1, P2, P3>(name, func);
 		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4))
-	{
+	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4)) {
 		MethodClass4<RL, T, P1, P2, P3, P4>* method = new MethodClass4<RL, T, P1, P2, P3, P4>(name, func);
 		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5))
-	{
+	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5)) {
 		MethodClass5<RL, T, P1, P2, P3, P4, P5>* method = new MethodClass5<RL, T, P1, P2, P3, P4, P5>(name, func);
 		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6))
-	{
+	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6)) {
 		MethodClass6<RL, T, P1, P2, P3, P4, P5, P6>* method = new MethodClass6<RL, T, P1, P2, P3, P4, P5, P6>(name, func);
 		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7))
-	{
+	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7)) {
 		MethodClass7<RL, T, P1, P2, P3, P4, P5, P6, P7>* method = new MethodClass7<RL, T, P1, P2, P3, P4, P5, P6, P7>(name, func);
 		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7, P8))
-	{
+	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7, P8)) {
 		MethodClass8<RL, T, P1, P2, P3, P4, P5, P6, P7, P8>* method = new MethodClass8<RL, T, P1, P2, P3, P4, P5, P6, P7, P8>(name, func);
 		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9))
-	{
+	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9)) {
 		MethodClass9<RL, T, P1, P2, P3, P4, P5, P6, P7, P8, P9>* method = new MethodClass9<RL, T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(name, func);
 		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
@@ -521,8 +757,7 @@ namespace ELuna
 		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~FunctionClass##N() {};\
 		virtual inline const char* getMethodName(){ return m_name;};\
-		virtual int call(lua_State *L)\
-		{\
+		virtual int call(lua_State *L) {\
 			push2lua(L, (*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N));\
 			return 1;\
 		};\
@@ -538,8 +773,7 @@ namespace ELuna
 		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~FunctionClass##N() {};\
 		virtual inline const char* getMethodName(){ return m_name;};\
-		virtual int call(lua_State *L)\
-		{\
+		virtual int call(lua_State *L) {\
 			(*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N);\
 			return 0;\
 		};\
@@ -573,8 +807,7 @@ namespace ELuna
 	}
 
 	template<typename RL>
-	inline void registerFunction(lua_State* L, const char* name, RL (*func)())
-	{
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)()) {
 		FunctionClass0<RL>* pFunction = new FunctionClass0<RL>(name, func);
 
 		lua_pushstring(L, name);
@@ -586,8 +819,7 @@ namespace ELuna
 	}
 
 	template<typename RL, typename P1>
-	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1))
-	{
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1)) {
 		FunctionClass1<RL, P1>* pFunction = new FunctionClass1<RL, P1>(name, func);
 
 		lua_pushstring(L, name);
@@ -599,8 +831,7 @@ namespace ELuna
 	}
 
 	template<typename RL, typename P1, typename P2>
-	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2))
-	{
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2)) {
 		FunctionClass2<RL, P1, P2>* pFunction = new FunctionClass2<RL, P1, P2>(name, func);
 
 		lua_pushstring(L, name);
@@ -612,8 +843,7 @@ namespace ELuna
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3>
-	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3))
-	{
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3)) {
 		FunctionClass3<RL, P1, P2, P3>* pFunction = new FunctionClass3<RL, P1, P2, P3>(name, func);
 
 		lua_pushstring(L, name);
@@ -625,8 +855,7 @@ namespace ELuna
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4>
-	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4))
-	{
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4)) {
 		FunctionClass4<RL, P1, P2, P3, P4>* pFunction = new FunctionClass4<RL, P1, P2, P3, P4>(name, func);
 
 		lua_pushstring(L, name);
@@ -638,8 +867,7 @@ namespace ELuna
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5>
-	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5))
-	{
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5)) {
 		FunctionClass5<RL, P1, P2, P3, P4, P5>* pFunction = new FunctionClass5<RL, P1, P2, P3, P4, P5>(name, func);
 
 		lua_pushstring(L, name);
@@ -651,8 +879,7 @@ namespace ELuna
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6))
-	{
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6)) {
 		FunctionClass6<RL, P1, P2, P3, P4, P5, P6>* pFunction = new FunctionClass6<RL, P1, P2, P3, P4, P5, P6>(name, func);
 
 		lua_pushstring(L, name);
@@ -664,8 +891,7 @@ namespace ELuna
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
-	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7))
-	{
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7)) {
 		FunctionClass7<RL, P1, P2, P3, P4, P5, P6, P7>* pFunction = new FunctionClass7<RL, P1, P2, P3, P4, P5, P6, P7>(name, func);
 
 		lua_pushstring(L, name);
@@ -677,8 +903,7 @@ namespace ELuna
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
-	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7, P8))
-	{
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7, P8)) {
 		FunctionClass8<RL, P1, P2, P3, P4, P5, P6, P7, P8>* pFunction = new FunctionClass8<RL, P1, P2, P3, P4, P5, P6, P7, P8>(name, func);
 
 		lua_pushstring(L, name);
@@ -690,8 +915,7 @@ namespace ELuna
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
-	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9))
-	{
+	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9)) {
 		FunctionClass9<RL, P1, P2, P3, P4, P5, P6, P7, P8, P9>* pFunction = new FunctionClass9<RL, P1, P2, P3, P4, P5, P6, P7, P8, P9>(name, func);
 
 		lua_pushstring(L, name);
@@ -702,8 +926,7 @@ namespace ELuna
 		pushFunction(pFunction);
 	}
 
-	void traceStack(lua_State* L, int n)
-	{
+	void traceStack(lua_State* L, int n) {
 		lua_Debug ar;
 		if(lua_getstack(L, n, &ar))
 		{
@@ -719,8 +942,7 @@ namespace ELuna
 		}
 	}
 
-	int error_log(lua_State *L)
-	{
+	int error_log(lua_State *L) {
 		printf("error : %s\n", lua_tostring(L, -1));
 
 		traceStack(L, 0);
@@ -735,7 +957,11 @@ namespace ELuna
 	struct LuaFunction
 	{
 	public:
-		~LuaFunction() {m_luaState = NULL;};
+		~LuaFunction() {
+			luaL_unref(m_luaState, LUA_REGISTRYINDEX, m_ref); 
+			m_luaState = NULL;
+		}
+
 		LuaFunction(lua_State* L, const char* funcName): m_luaState(L) {
 			lua_pushstring(L, funcName);
 			lua_gettable(L, LUA_GLOBALSINDEX);
@@ -748,8 +974,7 @@ namespace ELuna
 			}
 		};
 
-		RL operator()()
-		{
+		RL operator()() {
 			lua_pushcclosure(m_luaState, error_log, 0);                // stack top +1
 			int stackTop = lua_gettop(m_luaState);
 
@@ -762,8 +987,7 @@ namespace ELuna
 		}
 
 		template<typename P1>
-		RL operator()(P1 p1)
-		{
+		RL operator()(P1 p1) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -777,8 +1001,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2>
-		RL operator()(P1 p1, P2 p2)
-		{
+		RL operator()(P1 p1, P2 p2) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -792,8 +1015,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3>
-		RL operator()(P1 p1, P2 p2, P3 p3)
-		{
+		RL operator()(P1 p1, P2 p2, P3 p3) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -807,8 +1029,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4>
-		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4)
-		{
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -822,8 +1043,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4, typename P5>
-		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
-		{
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -837,8 +1057,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
-		{
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -852,8 +1071,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
-		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
-		{
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -867,8 +1085,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
-		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
-		{
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -882,8 +1099,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
-		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9)
-		{
+		RL operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -894,6 +1110,161 @@ namespace ELuna
 			RL result = read2cpp<RL>(m_luaState, -1);
 			lua_settop(m_luaState, -3);
 			return result;
+		}
+
+	private:
+		int m_ref;
+		//const char* m_name;
+		lua_State* m_luaState;
+	};
+
+	template<>
+	struct LuaFunction<LuaTable>
+	{
+	public:
+		~LuaFunction() {
+			luaL_unref(m_luaState, LUA_REGISTRYINDEX, m_ref); 
+			m_luaState = NULL;
+		}
+
+		LuaFunction(lua_State* L, const char* funcName): m_luaState(L) {
+			lua_pushstring(L, funcName);
+			lua_gettable(L, LUA_GLOBALSINDEX);
+
+			if (lua_isfunction(L, -1)) {
+				m_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+			} else {
+				printf("%s is not a lua function!\n", funcName);
+				assert(0);
+			}
+		};
+
+		LuaTable operator()() {
+			lua_pushcclosure(m_luaState, error_log, 0);                // stack top +1
+			int stackTop = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			lua_pcall(m_luaState, 0, 1, stackTop);                     // stack top +1
+
+			lua_remove(m_luaState, -2);
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<typename P1>
+		LuaTable operator()(P1 p1) {
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int stackTop = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1);
+			lua_pcall(m_luaState, 1, 1, stackTop);
+
+			lua_remove(m_luaState, -2);
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2>
+		LuaTable operator()(P1 p1, P2 p2) {
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int stackTop = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2);
+			lua_pcall(m_luaState, 2, 1, stackTop);
+
+			lua_remove(m_luaState, -2);
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3>
+		LuaTable operator()(P1 p1, P2 p2, P3 p3) {
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int stackTop = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3);
+			lua_pcall(m_luaState, 3, 1, stackTop);
+
+			lua_remove(m_luaState, -2);
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4>
+		LuaTable operator()(P1 p1, P2 p2, P3 p3, P4 p4) {
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int stackTop = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4);
+			lua_pcall(m_luaState, 4, 1, stackTop);
+
+			lua_remove(m_luaState, -2);
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5>
+		LuaTable operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) {
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int stackTop = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5);
+			lua_pcall(m_luaState, 5, 1, stackTop);
+
+			lua_remove(m_luaState, -2);
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
+		LuaTable operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6) {
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int stackTop = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6);
+			lua_pcall(m_luaState, 6, 1, stackTop);
+
+			lua_remove(m_luaState, -2);
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+		LuaTable operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7) {
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int stackTop = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6); push2lua(m_luaState, p7);
+			lua_pcall(m_luaState, 7, 1, stackTop);
+
+			lua_remove(m_luaState, -2);
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+		LuaTable operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8) {
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int stackTop = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6); push2lua(m_luaState, p7); push2lua(m_luaState, p8);
+			lua_pcall(m_luaState, 8, 1, stackTop);
+
+			lua_remove(m_luaState, -2);
+			return LuaTable(m_luaState, -1);
+		}
+
+		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
+		LuaTable operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9) {
+			lua_pushcclosure(m_luaState, error_log, 0);
+			int stackTop = lua_gettop(m_luaState);
+
+			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
+			push2lua(m_luaState, p1); push2lua(m_luaState, p2); push2lua(m_luaState, p3); push2lua(m_luaState, p4); push2lua(m_luaState, p5); push2lua(m_luaState, p6); push2lua(m_luaState, p7); push2lua(m_luaState, p8); push2lua(m_luaState, p9);
+			lua_pcall(m_luaState, 9, 1, stackTop);
+
+			lua_remove(m_luaState, -2);
+			return LuaTable(m_luaState, -1);
 		}
 
 	private:
@@ -918,24 +1289,23 @@ namespace ELuna
 			}
 		};
 
-		~LuaFunction() {m_luaState = NULL;};
+		~LuaFunction() {
+			luaL_unref(m_luaState, LUA_REGISTRYINDEX, m_ref); 
+			m_luaState = NULL;
+		};
 
-		void operator()()
-		{
-			//printf("operator top: %d\n", lua_gettop(m_luaState));
+		void operator()() {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
 			lua_rawgeti(m_luaState, LUA_REGISTRYINDEX, m_ref);
 			lua_pcall(m_luaState, 0, 1, stackTop);
 
-			//printf("lua_pcall top: %d\n", lua_gettop(m_luaState));
 			lua_settop(m_luaState, -3);
 		}
 
 		template<typename P1>
-		void operator()(P1 p1)
-		{
+		void operator()(P1 p1) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -947,8 +1317,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2>
-		void operator()(P1 p1, P2 p2)
-		{
+		void operator()(P1 p1, P2 p2) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -960,8 +1329,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3>
-		void operator()(P1 p1, P2 p2, P3 p3)
-		{
+		void operator()(P1 p1, P2 p2, P3 p3) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -973,8 +1341,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4>
-		void operator()(P1 p1, P2 p2, P3 p3, P4 p4)
-		{
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -986,8 +1353,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4, typename P5>
-		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
-		{
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -999,8 +1365,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6)
-		{
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -1012,8 +1377,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
-		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7)
-		{
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -1025,8 +1389,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
-		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8)
-		{
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -1038,8 +1401,7 @@ namespace ELuna
 		}
 
 		template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
-		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9)
-		{
+		void operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5, P6 p6, P7 p7, P8 p8, P9 p9) {
 			lua_pushcclosure(m_luaState, error_log, 0);
 			int stackTop = lua_gettop(m_luaState);
 
@@ -1056,13 +1418,11 @@ namespace ELuna
 		lua_State* m_luaState;
 	};
 
-	void doFile(lua_State *L, const char *fileName)
-	{
+	void doFile(lua_State *L, const char *fileName) {
 		lua_pushcclosure(L, error_log, 0);
 		int stackTop = lua_gettop(L);
 
-		if(luaL_loadfile(L, fileName) == 0)
-		{
+		if(luaL_loadfile(L, fileName) == 0) {
 			if(lua_pcall(L, 0, 0, stackTop)) {
 				lua_pop(L, 1);
 			}
@@ -1070,6 +1430,7 @@ namespace ELuna
 			printf("dofile error: %s\n", lua_tostring(L, -1));
 			lua_pop(L, 1);
 		}
+
 		lua_pop(L, 1);
 	}
 
@@ -1087,7 +1448,6 @@ namespace ELuna
 		releaseClass();
 		releaseFunction();
 		lua_close(L);
-		//printf("close top: %d\n", lua_gettop(L));
 	}
 
 } // namespace ELuna
