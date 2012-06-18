@@ -266,7 +266,14 @@ namespace ELuna
 	template<typename T>
 	struct convert2CppType<T&> { static T& convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
 
-	template<typename T> inline T   read2cpp(lua_State *L, int index) { return convert2CppType<T>::convertType(L, index);};
+	template<typename T> inline T   read2cpp(lua_State *L, int index) {
+		if(!lua_isuserdata(L,index)) {
+			lua_pushstring(L, "this arg is not a userdata!\n");
+			lua_error(L);
+		}
+
+		return convert2CppType<T>::convertType(L, index);
+	};
 	template<>	inline void			read2cpp(lua_State *L, int index) {}; 
 	template<>	inline bool         read2cpp(lua_State *L, int index) { return lua_toboolean(L, -1) ? true : false;};
 	template<>	inline char*		read2cpp(lua_State *L, int index) { return (char*)lua_tostring(L, index); };
@@ -933,7 +940,7 @@ namespace ELuna
 			lua_getinfo(L, "Sln", &ar);
 
 			if(ar.name) {
-				printf("\tstack[%d] -> line %d : %s()[%s : line %d]\n", n, ar.name, ar.currentline, ar.short_src, ar.linedefined);
+				printf("\tstack[%d] -> line %d : %s()[%s : line %d]\n", n, ar.currentline, ar.name, ar.short_src, ar.linedefined);
 			} else {
 				printf("\tstack[%d] -> line %d : unknown[%s : line %d]\n", n, ar.currentline, ar.short_src, ar.linedefined);
 			}
