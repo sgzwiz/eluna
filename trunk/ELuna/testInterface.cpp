@@ -9,7 +9,7 @@ public:
 		printf(" Test0 Constructor!\n");
 	}
 
-	~Test() { printf(" Test Destructor!\n");}
+	~Test() { printf(" Test0 Destructor!\n");}
 
 	void foo0() {
 		printf("foo0: \n");
@@ -378,6 +378,18 @@ void testCPP(lua_State* L) {
 	ELuna::registerFunction(L, "foo8", &foo8);
 	ELuna::registerFunction(L, "foo9", &foo9);
 
+	//register a function
+	ELuna::registerFunction(L, "retFoo0", &retFoo0);
+	ELuna::registerFunction(L, "retFoo1", &retFoo1);
+	ELuna::registerFunction(L, "retFoo2", &retFoo2);
+	ELuna::registerFunction(L, "retFoo3", &retFoo3);
+	ELuna::registerFunction(L, "retFoo4", &retFoo4);
+	ELuna::registerFunction(L, "retFoo5", &retFoo5);
+	ELuna::registerFunction(L, "retFoo6", &retFoo6);
+	ELuna::registerFunction(L, "retFoo7", &retFoo7);
+	ELuna::registerFunction(L, "retFoo8", &retFoo8);
+	ELuna::registerFunction(L, "retFoo9", &retFoo9);
+
 	//test constructor
 	ELuna::registerClass<Test1>(L, "Test1", ELuna::constructor<Test1, int>);
 	ELuna::registerClass<Test2>(L, "Test2", ELuna::constructor<Test2, int, int>);
@@ -413,6 +425,7 @@ void testLua(lua_State* L) {
 	ELuna::LuaFunction<int> retFoo7(L, "retFoo7");
 	ELuna::LuaFunction<int> retFoo8(L, "retFoo8");
 	ELuna::LuaFunction<int> retFoo9(L, "retFoo9");
+
 
 	foo0();
 	foo1(1);

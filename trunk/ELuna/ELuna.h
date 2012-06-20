@@ -30,6 +30,15 @@ extern "C" {
 
 namespace ELuna
 {
+	struct GenericMethod;
+	struct GenericFunction;
+	struct ProxyClass;
+
+	typedef std::vector<GenericMethod*>   Method_Vector;
+	typedef std::vector<GenericFunction*> Function_Vector;
+	typedef std::map<const char*, ProxyClass*> Classes_Map;
+	
+
 	///////////////////////////////////////////////////////////////////////////////
 	// lua's string type
 	///////////////////////////////////////////////////////////////////////////////
@@ -465,10 +474,8 @@ namespace ELuna
 	ELUNA_MAKE_VOID_RL_METHODCLASSX(7)
 	ELUNA_MAKE_VOID_RL_METHODCLASSX(8)
 	ELUNA_MAKE_VOID_RL_METHODCLASSX(9)
-
-	typedef std::vector<GenericMethod*> Method_Vector;
 	
-	class ProxyClass
+	struct ProxyClass
 	{
 	public:
 		ProxyClass(){};
@@ -492,22 +499,12 @@ namespace ELuna
 		Method_Vector m_methods;
 	};
 
-	typedef std::map<const char*, ProxyClass*> CPPClassesT;
-	CPPClassesT m_CPPClasses;
-	inline ProxyClass* getProxyClass(const char* name) { return m_CPPClasses[name];};
-	inline void insertProxyClass(const char* name, ProxyClass* pClass) {m_CPPClasses.insert(std::pair<const char*, ProxyClass*>(name, pClass));};
-	inline void releaseClass() {
-		for (CPPClassesT::iterator itr = m_CPPClasses.begin(); itr != m_CPPClasses.end(); ++itr) {
-			//printf("releaseClass %p\n", itr->second);
-			delete (itr->second);
-		}
-	}
 
     template<typename T, typename F>
     inline void registerClass(lua_State *L, const char* name, F func) {
 		ProxyClass::className<T>(name);
         ProxyClass* pClass = new ProxyClass();
-		insertProxyClass(name, pClass);
+		CPPGarbage::insertProxyClass(name, pClass);
 
         lua_pushcfunction(L, func);
         lua_setglobal(L, name); 
@@ -591,7 +588,7 @@ namespace ELuna
 
 		lua_rawset(L, -3); // self[0] = obj;
 
-		ProxyClass* pClass = m_CPPClasses[className];
+		ProxyClass* pClass = CPPGarbage::getProxyClass(className); //m_CPPClasses[className];
 		GenericMethod* pMethod = NULL;
 		for( int i = 0; i < pClass->getMethodsCount(); ++i) {
 			pMethod = pClass->getMethod(i);
@@ -620,70 +617,70 @@ namespace ELuna
 	template<typename T, typename RL>
 	inline void registerMethod(const char* name, RL (T::*func)()) {
 		MethodClass0<RL, T>* method = new MethodClass0<RL, T>(name, func);
-		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
+		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
     template<typename T, typename RL, typename P1>
 	inline void registerMethod(const char* name, RL (T::*func)(P1)) {
 		MethodClass1<RL, T, P1>* method = new MethodClass1<RL, T, P1>(name, func);
-		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
+		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
     }
 
 	template<typename T, typename RL, typename P1, typename P2>
 	inline void registerMethod(const char* name, RL (T::*func)(P1, P2)) {
 		MethodClass2<RL, T, P1, P2>* method = new MethodClass2<RL, T, P1, P2>(name, func);
-		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
+		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3>
 	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3)) {
 		MethodClass3<RL, T, P1, P2, P3>* method = new MethodClass3<RL, T, P1, P2, P3>(name, func);
-		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
+		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4>
 	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4)) {
 		MethodClass4<RL, T, P1, P2, P3, P4>* method = new MethodClass4<RL, T, P1, P2, P3, P4>(name, func);
-		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
+		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5>
 	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5)) {
 		MethodClass5<RL, T, P1, P2, P3, P4, P5>* method = new MethodClass5<RL, T, P1, P2, P3, P4, P5>(name, func);
-		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
+		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
 	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6)) {
 		MethodClass6<RL, T, P1, P2, P3, P4, P5, P6>* method = new MethodClass6<RL, T, P1, P2, P3, P4, P5, P6>(name, func);
-		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
+		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
 	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7)) {
 		MethodClass7<RL, T, P1, P2, P3, P4, P5, P6, P7>* method = new MethodClass7<RL, T, P1, P2, P3, P4, P5, P6, P7>(name, func);
-		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
+		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
 	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7, P8)) {
 		MethodClass8<RL, T, P1, P2, P3, P4, P5, P6, P7, P8>* method = new MethodClass8<RL, T, P1, P2, P3, P4, P5, P6, P7, P8>(name, func);
-		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
+		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
 	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9)) {
 		MethodClass9<RL, T, P1, P2, P3, P4, P5, P6, P7, P8, P9>* method = new MethodClass9<RL, T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(name, func);
-		ProxyClass* pClass = getProxyClass(ProxyClass::className<T>());
+		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
 		pClass->pushMethod(method);
 	}
 
@@ -698,20 +695,9 @@ namespace ELuna
 		GenericFunction() {};
 
 		virtual int call(lua_State *L) { return 0;};
-		virtual inline const char* getFunctionName(){ return m_name;};
 	private:
 		const char* m_name;
 	};
-
-	typedef std::vector<GenericFunction*> CPPFunctionT;
-	CPPFunctionT m_CPPFunctions;
-	inline void pushFunction(GenericFunction* function) { m_CPPFunctions.push_back(function);};
-	inline void releaseFunction() {
-		for (CPPFunctionT::iterator itr = m_CPPFunctions.begin(); itr != m_CPPFunctions.end(); ++itr) {
-			//printf("releaseFunction %p\n", *itr);
-			delete *itr;
-		}
-	}
 
 	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_0 typename RL
 	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_1 ELUNA_FUNCTIONCLASSX_PARAM_LIST_0, typename P1
@@ -763,7 +749,6 @@ namespace ELuna
 		const char* m_name;\
 		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~FunctionClass##N() {};\
-		virtual inline const char* getMethodName(){ return m_name;};\
 		virtual int call(lua_State *L) {\
 			push2lua(L, (*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N));\
 			return 1;\
@@ -779,7 +764,6 @@ namespace ELuna
 		const char* m_name;\
 		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~FunctionClass##N() {};\
-		virtual inline const char* getMethodName(){ return m_name;};\
 		virtual int call(lua_State *L) {\
 			(*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N);\
 			return 0;\
@@ -822,7 +806,7 @@ namespace ELuna
 		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(pFunction);
+		CPPGarbage::pushFunction(pFunction);
 	}
 
 	template<typename RL, typename P1>
@@ -834,7 +818,7 @@ namespace ELuna
 		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(pFunction);
+		CPPGarbage::pushFunction(pFunction);
 	}
 
 	template<typename RL, typename P1, typename P2>
@@ -846,7 +830,7 @@ namespace ELuna
 		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(pFunction);
+		CPPGarbage::pushFunction(pFunction);
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3>
@@ -858,7 +842,7 @@ namespace ELuna
 		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(pFunction);
+		CPPGarbage::pushFunction(pFunction);
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4>
@@ -870,7 +854,7 @@ namespace ELuna
 		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(pFunction);
+		CPPGarbage::pushFunction(pFunction);
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5>
@@ -882,7 +866,7 @@ namespace ELuna
 		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(pFunction);
+		CPPGarbage::pushFunction(pFunction);
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
@@ -894,7 +878,7 @@ namespace ELuna
 		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(pFunction);
+		CPPGarbage::pushFunction(pFunction);
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
@@ -906,7 +890,7 @@ namespace ELuna
 		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(pFunction);
+		CPPGarbage::pushFunction(pFunction);
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
@@ -918,7 +902,7 @@ namespace ELuna
 		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(pFunction);
+		CPPGarbage::pushFunction(pFunction);
 	}
 
 	template<typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
@@ -930,13 +914,12 @@ namespace ELuna
 		lua_pushcclosure(L, proxyFunctionCall, 1);
 		lua_settable(L, LUA_GLOBALSINDEX);
 
-		pushFunction(pFunction);
+		CPPGarbage::pushFunction(pFunction);
 	}
 
 	void traceStack(lua_State* L, int n) {
 		lua_Debug ar;
-		if(lua_getstack(L, n, &ar))
-		{
+		if(lua_getstack(L, n, &ar)) {
 			lua_getinfo(L, "Sln", &ar);
 
 			if(ar.name) {
@@ -1141,7 +1124,7 @@ namespace ELuna
 			if (lua_isfunction(L, -1)) {
 				m_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 			} else {
-				printf("%s is not a lua function!\n", funcName);
+				printf("%s is not a lua function!\n", funcName);	
 				assert(0);
 			}
 		};
@@ -1425,6 +1408,31 @@ namespace ELuna
 		lua_State* m_luaState;
 	};
 
+	struct CPPGarbage 
+	{
+		inline static ProxyClass* getProxyClass(const char* name) { return m_CPPClasses[name];};
+		inline static void insertProxyClass(const char* name, ProxyClass* pClass) {m_CPPClasses.insert(std::pair<const char*, ProxyClass*>(name, pClass));};
+		inline static void pushFunction(GenericFunction* function) { m_CPPFunctions.push_back(function);};
+
+		inline static void release() {
+			for (Function_Vector::iterator itr = m_CPPFunctions.begin(); itr != m_CPPFunctions.end(); ++itr) {
+				//printf("releaseFunctions %p\n", *itr);
+				delete *itr;
+			}
+
+			for (Classes_Map::iterator itr = m_CPPClasses.begin(); itr != m_CPPClasses.end(); ++itr) {
+				//printf("releaseClass %p\n", itr->second);
+				delete (itr->second);
+			}
+		}
+
+	private:
+		static Classes_Map     m_CPPClasses;
+		static Function_Vector m_CPPFunctions;
+	};
+	Classes_Map     CPPGarbage::m_CPPClasses;
+	Function_Vector CPPGarbage::m_CPPFunctions;
+
 	void doFile(lua_State *L, const char *fileName) {
 		lua_pushcclosure(L, error_log, 0);
 		int stackTop = lua_gettop(L);
@@ -1452,8 +1460,7 @@ namespace ELuna
 	}
 
 	void closeLua(lua_State* L) {
-		releaseClass();
-		releaseFunction();
+		CPPGarbage::release();
 		lua_close(L);
 	}
 
