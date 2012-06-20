@@ -48,7 +48,7 @@ public:
 	}
 
 	void foo9(int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8, int p9) {
-		printf("foo9: %d %d %d %d %d %d %d %d\n", p1, p2, p3, p4, p5, p6, p7, p8, p9);
+		printf("foo9: %d %d %d %d %d %d %d %d %d\n", p1, p2, p3, p4, p5, p6, p7, p8, p9);
 	}
 
 	int retFoo0() {
@@ -280,7 +280,7 @@ void foo8(int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8) {
 }
 
 void foo9(int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8, int p9) {
-	printf("foo9: %d %d %d %d %d %d %d %d\n", p1, p2, p3, p4, p5, p6, p7, p8, p9);
+	printf("foo9: %d %d %d %d %d %d %d %d %d\n", p1, p2, p3, p4, p5, p6, p7, p8, p9);
 }
 
 int retFoo0() {
