@@ -30,15 +30,6 @@ extern "C" {
 
 namespace ELuna
 {
-	struct GenericMethod;
-	struct GenericFunction;
-	struct ProxyClass;
-
-	typedef std::vector<GenericMethod*>   Method_Vector;
-	typedef std::vector<GenericFunction*> Function_Vector;
-	typedef std::map<const char*, ProxyClass*> Classes_Map;
-	
-
 	///////////////////////////////////////////////////////////////////////////////
 	// lua's string type
 	///////////////////////////////////////////////////////////////////////////////
@@ -311,7 +302,7 @@ namespace ELuna
 			T** ud = (T**)lua_newuserdata(L, sizeof(T*)); 
 			*ud = new T(ret);
 
-			luaL_getmetatable(L, ProxyClass::className<T>());
+			luaL_getmetatable(L, ClassName<T>::getName());
 			lua_setmetatable(L, -2);
 		}
 	};
@@ -322,7 +313,7 @@ namespace ELuna
 			T** ud = (T**)lua_newuserdata(L, sizeof(T*)); 
 			*ud = ret;
 
-			luaL_getmetatable(L, ProxyClass::className<T>());
+			luaL_getmetatable(L, ClassName<T>::getName());
 			lua_setmetatable(L, -2);
 		}
 	};
@@ -333,7 +324,7 @@ namespace ELuna
 			T** ud = (T**)lua_newuserdata(L, sizeof(T*)); 
 			*ud = &ret;
 
-			luaL_getmetatable(L, ProxyClass::className<T>());
+			luaL_getmetatable(L, ClassName<T>::getName());
 			lua_setmetatable(L, -2);
 		}
 	};
@@ -409,7 +400,6 @@ namespace ELuna
 		GenericMethod() {};
 
 		virtual int call(lua_State *L) { return 0;};
-		virtual inline const char* getMethodName(){ return m_name;};
 
 	private:
 		const char* m_name;
@@ -424,12 +414,9 @@ namespace ELuna
 		const char* m_name;\
 		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~MethodClass##N(){};\
-		virtual inline const char* getMethodName(){ return m_name;};\
 		virtual int call(lua_State *L) {\
-			lua_pushnumber(L, 0);\
-			lua_rawget(L, 1); \
-			T** obj = (T**)lua_touserdata(L, -1);\
-			push2lua(L, ((*obj)->*(m_func))(ELUNA_READ_METHOD_PARAM_LIST_##N));\
+			T* obj = read2cpp<T*>(L, 1);\
+			push2lua(L, (obj->*m_func)(ELUNA_READ_METHOD_PARAM_LIST_##N));\
 			return 1;\
 		};\
 	};
@@ -443,12 +430,9 @@ namespace ELuna
 		const char* m_name;\
 		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~MethodClass##N(){};\
-		virtual inline const char* getMethodName(){ return m_name;};\
 		virtual int call(lua_State *L) {\
-			lua_pushnumber(L, 0);\
-			lua_rawget(L, 1);\
-			T** obj = (T**)lua_touserdata(L, -1);\
-			((*obj)->*(m_func))(ELUNA_READ_METHOD_PARAM_LIST_##N);\
+			T* obj = read2cpp<T*>(L, 1);\
+			(obj->*m_func)(ELUNA_READ_METHOD_PARAM_LIST_##N);\
 			return 0;\
 		};\
 	};
@@ -474,37 +458,21 @@ namespace ELuna
 	ELUNA_MAKE_VOID_RL_METHODCLASSX(7)
 	ELUNA_MAKE_VOID_RL_METHODCLASSX(8)
 	ELUNA_MAKE_VOID_RL_METHODCLASSX(9)
-	
-	struct ProxyClass
+
+	template<typename T>
+	struct ClassName
 	{
-	public:
-		ProxyClass(){};
-		~ProxyClass() {
-			for (Method_Vector::iterator itr = m_methods.begin(); itr != m_methods.end(); ++itr) {
-				delete *itr;
-			}
-		}
+		static inline void setName(const char* name) {m_name = name;}
+		static inline const char* getName() { return m_name;}
 
-		inline GenericMethod* getMethod(const int index) { return m_methods[index];};
-		inline int getMethodsCount() {return m_methods.size();};
-		inline void pushMethod(GenericMethod* method) { m_methods.push_back(method);};
-		
-		template<typename T>
-		static inline const char* className(const char* name = NULL) {
-			static const char* _name;
-			if(name) _name = name;
-			return _name;
-		}
-	private:
-		Method_Vector m_methods;
+		static const char* m_name;
 	};
-
+	template<typename T>
+	const char* ClassName<T>::m_name;
 
     template<typename T, typename F>
     inline void registerClass(lua_State *L, const char* name, F func) {
-		ProxyClass::className<T>(name);
-        ProxyClass* pClass = new ProxyClass();
-		CPPGarbage::insertProxyClass(name, pClass);
+		ClassName<T>::setName(name);
 
         lua_pushcfunction(L, func);
         lua_setglobal(L, name); 
@@ -515,11 +483,20 @@ namespace ELuna
 
 	template<typename T>
     inline void registerMetatable(lua_State *L, const char *name) {
-        luaL_newmetatable(L, name ); // create a metatable in the registry
+        luaL_newmetatable(L, name );  // create a metatable in the registry
+
+		lua_pushstring(L, "__index"); //push metamethods's name
+		lua_pushvalue(L, -2);         //push matatable
+		lua_settable(L, -3);          //metatable.__index = metatable
+
+		lua_pushstring(L, "__newindex");
+		lua_pushvalue(L, -2);
+		lua_settable(L, -3);          //metatable.__newindex = metatable 
 
         lua_pushstring(L, "__gc");
         lua_pushcfunction(L, &gc_obj<T>);
-        lua_rawset(L, -3); // metatable["__gc"] = Luna<T>::gc_obj
+        lua_rawset(L, -3);            // metatable.__gc = Luna<T>::gc_obj
+
         lua_pop(L, 1);
     }
 
@@ -575,28 +552,11 @@ namespace ELuna
 
 	template<typename T>
 	int inject(lua_State *L, T* obj) {
-		lua_newtable(L); // create a new table for the class object ('self')
-
-		lua_pushnumber(L, 0);
-
 		T** ud = static_cast<T**>(lua_newuserdata(L, sizeof(T*))); // store a ptr to the ptr
 		*ud = obj; // set the ptr to the ptr to point to the ptr... >.>
 
-		const char* className = ProxyClass::className<T>();
-		luaL_getmetatable(L, className);
+		luaL_getmetatable(L, ClassName<T>::getName());
 		lua_setmetatable(L, -2); // self.metatable = uniqe_metatable
-
-		lua_rawset(L, -3); // self[0] = obj;
-
-		ProxyClass* pClass = CPPGarbage::getProxyClass(className); //m_CPPClasses[className];
-		GenericMethod* pMethod = NULL;
-		for( int i = 0; i < pClass->getMethodsCount(); ++i) {
-			pMethod = pClass->getMethod(i);
-			lua_pushstring(L, pMethod->getMethodName());
-			lua_pushlightuserdata(L, pMethod);
-			lua_pushcclosure(L, &proxyMethodCall, 1);
-			lua_rawset(L, -3); 
-		}
 
 		return 1;
 	}
@@ -609,79 +569,189 @@ namespace ELuna
 	template<typename T>
     inline int gc_obj(lua_State *L) {
         // clean up
-        T** obj = static_cast<T**>(luaL_checkudata(L, -1, ProxyClass::className<T>()));
+        T** obj = static_cast<T**>(luaL_checkudata(L, -1, ClassName<T>::getName()));
         delete (*obj);
         return 0;
     }
 
 	template<typename T, typename RL>
-	inline void registerMethod(const char* name, RL (T::*func)()) {
-		MethodClass0<RL, T>* method = new MethodClass0<RL, T>(name, func);
-		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
-		pClass->pushMethod(method);
+	inline void registerMethod(lua_State* L, const char* name, RL (T::*func)()) {
+		luaL_getmetatable(L, ClassName<T>::getName());
+		
+		if(lua_istable(L, -1)) {
+			MethodClass0<RL, T>* method = new MethodClass0<RL, T>(name, func);
+			CPPGarbage::pushMethod(method);
+
+			lua_pushstring(L, name);
+			lua_pushlightuserdata(L, method);
+			lua_pushcclosure(L, &proxyMethodCall, 1);
+			lua_rawset(L, -3);
+		} else {
+			printf("please register class %s\n",  ClassName<T>::getName());
+		}
+		lua_pop(L, 1);
 	}
 
     template<typename T, typename RL, typename P1>
-	inline void registerMethod(const char* name, RL (T::*func)(P1)) {
-		MethodClass1<RL, T, P1>* method = new MethodClass1<RL, T, P1>(name, func);
-		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
-		pClass->pushMethod(method);
+	inline void registerMethod(lua_State* L, const char* name, RL (T::*func)(P1)) {
+		luaL_getmetatable(L, ClassName<T>::getName());
+
+		if(lua_istable(L, -1)) {
+			MethodClass1<RL, T, P1>* method = new MethodClass1<RL, T, P1>(name, func);
+			CPPGarbage::pushMethod(method);
+
+			lua_pushstring(L, name);
+			lua_pushlightuserdata(L, method);
+			lua_pushcclosure(L, &proxyMethodCall, 1);
+			lua_rawset(L, -3);
+		} else {
+			printf("please register class %s\n",  ClassName<T>::getName());
+		}
+		lua_pop(L, 1);
     }
 
 	template<typename T, typename RL, typename P1, typename P2>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2)) {
-		MethodClass2<RL, T, P1, P2>* method = new MethodClass2<RL, T, P1, P2>(name, func);
-		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
-		pClass->pushMethod(method);
+	inline void registerMethod(lua_State* L, const char* name, RL (T::*func)(P1, P2)) {
+		luaL_getmetatable(L, ClassName<T>::getName());
+
+		if(lua_istable(L, -1)) {
+			MethodClass2<RL, T, P1, P2>* method = new MethodClass2<RL, T, P1, P2>(name, func);
+			CPPGarbage::pushMethod(method);
+
+			lua_pushstring(L, name);
+			lua_pushlightuserdata(L, method);
+			lua_pushcclosure(L, &proxyMethodCall, 1);
+			lua_rawset(L, -3);
+		} else {
+			printf("please register class %s\n",  ClassName<T>::getName());
+		}
+		lua_pop(L, 1);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3)) {
-		MethodClass3<RL, T, P1, P2, P3>* method = new MethodClass3<RL, T, P1, P2, P3>(name, func);
-		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
-		pClass->pushMethod(method);
+	inline void registerMethod(lua_State* L, const char* name, RL (T::*func)(P1, P2, P3)) {
+		luaL_getmetatable(L, ClassName<T>::getName());
+
+		if(lua_istable(L, -1)) {
+			MethodClass3<RL, T, P1, P2, P3>* method = new MethodClass3<RL, T, P1, P2, P3>(name, func);
+			CPPGarbage::pushMethod(method);
+
+			lua_pushstring(L, name);
+			lua_pushlightuserdata(L, method);
+			lua_pushcclosure(L, &proxyMethodCall, 1);
+			lua_rawset(L, -3);
+		} else {
+			printf("please register class %s\n", ClassName<T>::getName());
+		}
+		lua_pop(L, 1);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4)) {
-		MethodClass4<RL, T, P1, P2, P3, P4>* method = new MethodClass4<RL, T, P1, P2, P3, P4>(name, func);
-		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
-		pClass->pushMethod(method);
+	inline void registerMethod(lua_State* L, const char* name, RL (T::*func)(P1, P2, P3, P4)) {
+		luaL_getmetatable(L, ClassName<T>::getName());
+
+		if(lua_istable(L, -1)) {
+			MethodClass4<RL, T, P1, P2, P3, P4>* method = new MethodClass4<RL, T, P1, P2, P3, P4>(name, func);
+			CPPGarbage::pushMethod(method);
+
+			lua_pushstring(L, name);
+			lua_pushlightuserdata(L, method);
+			lua_pushcclosure(L, &proxyMethodCall, 1);
+			lua_rawset(L, -3);
+		} else {
+			printf("please register class %s\n",  ClassName<T>::getName());
+		}
+		lua_pop(L, 1);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5)) {
-		MethodClass5<RL, T, P1, P2, P3, P4, P5>* method = new MethodClass5<RL, T, P1, P2, P3, P4, P5>(name, func);
-		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
-		pClass->pushMethod(method);
+	inline void registerMethod(lua_State* L, const char* name, RL (T::*func)(P1, P2, P3, P4, P5)) {
+		luaL_getmetatable(L, ClassName<T>::getName());
+
+		if(lua_istable(L, -1)) {
+			MethodClass5<RL, T, P1, P2, P3, P4, P5>* method = new MethodClass5<RL, T, P1, P2, P3, P4, P5>(name, func);
+			CPPGarbage::pushMethod(method);
+
+			lua_pushstring(L, name);
+			lua_pushlightuserdata(L, method);
+			lua_pushcclosure(L, &proxyMethodCall, 1);
+			lua_rawset(L, -3);
+		} else {
+			printf("please register class %s\n",  ClassName<T>::getName());
+		}
+		lua_pop(L, 1);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6)) {
-		MethodClass6<RL, T, P1, P2, P3, P4, P5, P6>* method = new MethodClass6<RL, T, P1, P2, P3, P4, P5, P6>(name, func);
-		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
-		pClass->pushMethod(method);
+	inline void registerMethod(lua_State* L, const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6)) {
+		luaL_getmetatable(L, ClassName<T>::getName());
+
+		if(lua_istable(L, -1)) {
+			MethodClass6<RL, T, P1, P2, P3, P4, P5, P6>* method = new MethodClass6<RL, T, P1, P2, P3, P4, P5, P6>(name, func);
+			CPPGarbage::pushMethod(method);
+
+			lua_pushstring(L, name);
+			lua_pushlightuserdata(L, method);
+			lua_pushcclosure(L, &proxyMethodCall, 1);
+			lua_rawset(L, -3);
+		} else {
+			printf("please register class %s\n", ClassName<T>::getName());
+		}
+		lua_pop(L, 1);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7)) {
-		MethodClass7<RL, T, P1, P2, P3, P4, P5, P6, P7>* method = new MethodClass7<RL, T, P1, P2, P3, P4, P5, P6, P7>(name, func);
-		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
-		pClass->pushMethod(method);
+	inline void registerMethod(lua_State* L, const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7)) {
+		luaL_getmetatable(L, ClassName<T>::getName());
+
+		if(lua_istable(L, -1)) {
+			MethodClass7<RL, T, P1, P2, P3, P4, P5, P6, P7>* method = new MethodClass7<RL, T, P1, P2, P3, P4, P5, P6, P7>(name, func);
+			CPPGarbage::pushMethod(method);
+
+			lua_pushstring(L, name);
+			lua_pushlightuserdata(L, method);
+			lua_pushcclosure(L, &proxyMethodCall, 1);
+			lua_rawset(L, -3);
+		} else {
+			printf("please register class %s\n",  ClassName<T>::getName());
+		}
+		lua_pop(L, 1);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7, P8)) {
-		MethodClass8<RL, T, P1, P2, P3, P4, P5, P6, P7, P8>* method = new MethodClass8<RL, T, P1, P2, P3, P4, P5, P6, P7, P8>(name, func);
-		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
-		pClass->pushMethod(method);
+	inline void registerMethod(lua_State* L, const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7, P8)) {
+		luaL_getmetatable(L, ClassName<T>::getName());
+
+		if(lua_istable(L, -1)) {
+			MethodClass8<RL, T, P1, P2, P3, P4, P5, P6, P7, P8>* method = new MethodClass8<RL, T, P1, P2, P3, P4, P5, P6, P7, P8>(name, func);
+			CPPGarbage::pushMethod(method);
+
+			lua_pushstring(L, name);
+			lua_pushlightuserdata(L, method);
+			lua_pushcclosure(L, &proxyMethodCall, 1);
+			lua_rawset(L, -3);
+		} else {
+			printf("please register class %s\n", ClassName<T>::getName());
+		}
+		lua_pop(L, 1);
 	}
 
 	template<typename T, typename RL, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
-	inline void registerMethod(const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9)) {
-		MethodClass9<RL, T, P1, P2, P3, P4, P5, P6, P7, P8, P9>* method = new MethodClass9<RL, T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(name, func);
-		ProxyClass* pClass = CPPGarbage::getProxyClass(ProxyClass::className<T>());
-		pClass->pushMethod(method);
+	inline void registerMethod(lua_State* L, const char* name, RL (T::*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9)) {
+		luaL_getmetatable(L, ClassName<T>::getName());
+
+		if(lua_istable(L, -1)) {
+			MethodClass9<RL, T, P1, P2, P3, P4, P5, P6, P7, P8, P9>* method = new MethodClass9<RL, T, P1, P2, P3, P4, P5, P6, P7, P8, P9>(name, func);
+			CPPGarbage::pushMethod(method);
+
+			lua_pushstring(L, name);
+			lua_pushlightuserdata(L, method);
+			lua_pushcclosure(L, &proxyMethodCall, 1);
+			lua_rawset(L, -3);
+		} else {
+			printf("please register class %s\n", ClassName<T>::getName());
+		}
+		lua_pop(L, 1);
 	}
 
 
@@ -1124,7 +1194,7 @@ namespace ELuna
 			if (lua_isfunction(L, -1)) {
 				m_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 			} else {
-				printf("%s is not a lua function!\n", funcName);	
+				printf("%s is not a lua function!\n", funcName);
 				assert(0);
 			}
 		};
@@ -1407,11 +1477,13 @@ namespace ELuna
 		//const char* m_name;
 		lua_State* m_luaState;
 	};
+	
+	typedef std::vector<GenericFunction*> Function_Vector;
+	typedef std::vector<GenericMethod*> Method_Vector;
 
 	struct CPPGarbage 
 	{
-		inline static ProxyClass* getProxyClass(const char* name) { return m_CPPClasses[name];};
-		inline static void insertProxyClass(const char* name, ProxyClass* pClass) {m_CPPClasses.insert(std::pair<const char*, ProxyClass*>(name, pClass));};
+		inline static void pushMethod(GenericMethod* method) { m_CPPMethods.push_back(method);};
 		inline static void pushFunction(GenericFunction* function) { m_CPPFunctions.push_back(function);};
 
 		inline static void release() {
@@ -1420,18 +1492,17 @@ namespace ELuna
 				delete *itr;
 			}
 
-			for (Classes_Map::iterator itr = m_CPPClasses.begin(); itr != m_CPPClasses.end(); ++itr) {
-				//printf("releaseClass %p\n", itr->second);
-				delete (itr->second);
+			for (Method_Vector::iterator itr = m_CPPMethods.begin(); itr != m_CPPMethods.end(); ++itr) {
+				//printf("releaseMethods %p\n", *itr);
+				delete *itr;
 			}
 		}
-
 	private:
-		static Classes_Map     m_CPPClasses;
 		static Function_Vector m_CPPFunctions;
+		static Method_Vector   m_CPPMethods;
 	};
-	Classes_Map     CPPGarbage::m_CPPClasses;
 	Function_Vector CPPGarbage::m_CPPFunctions;
+	Method_Vector   CPPGarbage::m_CPPMethods;
 
 	void doFile(lua_State *L, const char *fileName) {
 		lua_pushcclosure(L, error_log, 0);

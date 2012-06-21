@@ -80,7 +80,7 @@ end
 
 ----------------------------------------------------------
 print("run cpp interface")
-local cppTest = Test()
+local cppTest  = Test0()
 local cppTest1 = Test1(1)
 local cppTest2 = Test2(1,2)
 local cppTest3 = Test3(1,2,3)

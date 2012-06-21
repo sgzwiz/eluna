@@ -325,46 +325,46 @@ int retFoo9(int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8, int 
 
 void testCPP(lua_State* L) {
 	//register a class and it's constructor. indicate all constructor's param type
-	ELuna::registerClass<Test>(L, "Test", ELuna::constructor<Test>);
+	ELuna::registerClass<Test>(L, "Test0", ELuna::constructor<Test>);
 	//register a method
-	ELuna::registerMethod<Test>("foo0", &Test::foo0);
-	ELuna::registerMethod<Test>("foo1", &Test::foo1);
-	ELuna::registerMethod<Test>("foo2", &Test::foo2);
-	ELuna::registerMethod<Test>("foo3", &Test::foo3);
-	ELuna::registerMethod<Test>("foo4", &Test::foo4);
-	ELuna::registerMethod<Test>("foo5", &Test::foo5);
-	ELuna::registerMethod<Test>("foo6", &Test::foo6);
-	ELuna::registerMethod<Test>("foo7", &Test::foo7);
-	ELuna::registerMethod<Test>("foo8", &Test::foo8);
-	ELuna::registerMethod<Test>("foo9", &Test::foo9);
+	ELuna::registerMethod<Test>(L, "foo0", &Test::foo0);
+	ELuna::registerMethod<Test>(L, "foo1", &Test::foo1);
+	ELuna::registerMethod<Test>(L, "foo2", &Test::foo2);
+	ELuna::registerMethod<Test>(L, "foo3", &Test::foo3);
+	ELuna::registerMethod<Test>(L, "foo4", &Test::foo4);
+	ELuna::registerMethod<Test>(L, "foo5", &Test::foo5);
+	ELuna::registerMethod<Test>(L, "foo6", &Test::foo6);
+	ELuna::registerMethod<Test>(L, "foo7", &Test::foo7);
+	ELuna::registerMethod<Test>(L, "foo8", &Test::foo8);
+	ELuna::registerMethod<Test>(L, "foo9", &Test::foo9);
 
-	ELuna::registerMethod<Test>("retFoo0", &Test::retFoo0);
-	ELuna::registerMethod<Test>("retFoo1", &Test::retFoo1);
-	ELuna::registerMethod<Test>("retFoo2", &Test::retFoo2);
-	ELuna::registerMethod<Test>("retFoo3", &Test::retFoo3);
-	ELuna::registerMethod<Test>("retFoo4", &Test::retFoo4);
-	ELuna::registerMethod<Test>("retFoo5", &Test::retFoo5);
-	ELuna::registerMethod<Test>("retFoo6", &Test::retFoo6);
-	ELuna::registerMethod<Test>("retFoo7", &Test::retFoo7);
-	ELuna::registerMethod<Test>("retFoo8", &Test::retFoo8);
-	ELuna::registerMethod<Test>("retFoo9", &Test::retFoo9);
+	ELuna::registerMethod<Test>(L, "retFoo0", &Test::retFoo0);
+	ELuna::registerMethod<Test>(L, "retFoo1", &Test::retFoo1);
+	ELuna::registerMethod<Test>(L, "retFoo2", &Test::retFoo2);
+	ELuna::registerMethod<Test>(L, "retFoo3", &Test::retFoo3);
+	ELuna::registerMethod<Test>(L, "retFoo4", &Test::retFoo4);
+	ELuna::registerMethod<Test>(L, "retFoo5", &Test::retFoo5);
+	ELuna::registerMethod<Test>(L, "retFoo6", &Test::retFoo6);
+	ELuna::registerMethod<Test>(L, "retFoo7", &Test::retFoo7);
+	ELuna::registerMethod<Test>(L, "retFoo8", &Test::retFoo8);
+	ELuna::registerMethod<Test>(L, "retFoo9", &Test::retFoo9);
 
 	//test read2cpp and push2lua
-	ELuna::registerMethod<Test>("testBool", &Test::testBool);
-	ELuna::registerMethod<Test>("testChar", &Test::testChar);
-	ELuna::registerMethod<Test>("testDouble", &Test::testDouble);
-	ELuna::registerMethod<Test>("testFloat", &Test::testFloat);
-	ELuna::registerMethod<Test>("testLong", &Test::testLong);
-	ELuna::registerMethod<Test>("testLongLong", &Test::testLongLong);
-	ELuna::registerMethod<Test>("testLuaString", &Test::testLuaString);
-	ELuna::registerMethod<Test>("testPChar", &Test::testPChar);
-	ELuna::registerMethod<Test>("testPConstChar", &Test::testPConstChar);
-	ELuna::registerMethod<Test>("testShort", &Test::testShort);
-	ELuna::registerMethod<Test>("testUChar", &Test::testUChar);
-	ELuna::registerMethod<Test>("testUInt", &Test::testUInt);
-	ELuna::registerMethod<Test>("testULong", &Test::testULong);
-	ELuna::registerMethod<Test>("testULongLong", &Test::testULongLong);
-	ELuna::registerMethod<Test>("testUShort", &Test::testUShort);
+	ELuna::registerMethod<Test>(L, "testBool", &Test::testBool);
+	ELuna::registerMethod<Test>(L, "testChar", &Test::testChar);
+	ELuna::registerMethod<Test>(L, "testDouble", &Test::testDouble);
+	ELuna::registerMethod<Test>(L, "testFloat", &Test::testFloat);
+	ELuna::registerMethod<Test>(L, "testLong", &Test::testLong);
+	ELuna::registerMethod<Test>(L, "testLongLong", &Test::testLongLong);
+	ELuna::registerMethod<Test>(L, "testLuaString", &Test::testLuaString);
+	ELuna::registerMethod<Test>(L, "testPChar", &Test::testPChar);
+	ELuna::registerMethod<Test>(L, "testPConstChar", &Test::testPConstChar);
+	ELuna::registerMethod<Test>(L, "testShort", &Test::testShort);
+	ELuna::registerMethod<Test>(L, "testUChar", &Test::testUChar);
+	ELuna::registerMethod<Test>(L, "testUInt", &Test::testUInt);
+	ELuna::registerMethod<Test>(L, "testULong", &Test::testULong);
+	ELuna::registerMethod<Test>(L, "testULongLong", &Test::testULongLong);
+	ELuna::registerMethod<Test>(L, "testUShort", &Test::testUShort);
 
 	//register a function
 	ELuna::registerFunction(L, "foo0", &foo0);
@@ -377,18 +377,6 @@ void testCPP(lua_State* L) {
 	ELuna::registerFunction(L, "foo7", &foo7);
 	ELuna::registerFunction(L, "foo8", &foo8);
 	ELuna::registerFunction(L, "foo9", &foo9);
-
-	//register a function
-	ELuna::registerFunction(L, "retFoo0", &retFoo0);
-	ELuna::registerFunction(L, "retFoo1", &retFoo1);
-	ELuna::registerFunction(L, "retFoo2", &retFoo2);
-	ELuna::registerFunction(L, "retFoo3", &retFoo3);
-	ELuna::registerFunction(L, "retFoo4", &retFoo4);
-	ELuna::registerFunction(L, "retFoo5", &retFoo5);
-	ELuna::registerFunction(L, "retFoo6", &retFoo6);
-	ELuna::registerFunction(L, "retFoo7", &retFoo7);
-	ELuna::registerFunction(L, "retFoo8", &retFoo8);
-	ELuna::registerFunction(L, "retFoo9", &retFoo9);
 
 	//test constructor
 	ELuna::registerClass<Test1>(L, "Test1", ELuna::constructor<Test1, int>);
@@ -425,7 +413,6 @@ void testLua(lua_State* L) {
 	ELuna::LuaFunction<int> retFoo7(L, "retFoo7");
 	ELuna::LuaFunction<int> retFoo8(L, "retFoo8");
 	ELuna::LuaFunction<int> retFoo9(L, "retFoo9");
-
 
 	foo0();
 	foo1(1);

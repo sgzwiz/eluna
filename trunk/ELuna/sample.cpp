@@ -38,8 +38,8 @@ void testCPP(lua_State* L) {
 	//register a class and it's constructor. indicate all constructor's param type
 	ELuna::registerClass<CPPClass>(L, "CPPClass", ELuna::constructor<CPPClass, const char* >);
 	//register a method
-	ELuna::registerMethod<CPPClass>("cppPrint", &CPPClass::cppPrint);
-	ELuna::registerMethod<CPPClass>("cppSum", &CPPClass::cppSum);
+	ELuna::registerMethod<CPPClass>(L, "cppPrint", &CPPClass::cppPrint);
+	ELuna::registerMethod<CPPClass>(L, "cppSum", &CPPClass::cppSum);
 
 	//register a function
 	ELuna::registerFunction(L, "cppPrint", &cppPrint);
@@ -53,7 +53,12 @@ void testLua(lua_State* L) {
 
 	//run Luafunction's () to call lua function
 	luaPrint("hello world");
-	printf("luaSum: ", luaSum(1,2));
+	printf("luaSum: %d\n", luaSum(1,2));
+
+	//register a lua table
+	ELuna::LuaTable luaTable(L, "luaTable");
+	luaTable.set(2, "world");
+	printf("LuaTable: %s %s\n", luaTable.get<char*>(1), luaTable.get<char*>(2));
 }
 
 const char *fileName = "sample.lua";

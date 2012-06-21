@@ -17,3 +17,4 @@ function luaSum(a, b)
 	return a + b
 end
 
+luaTable = {"hello"}
