@@ -91,6 +91,7 @@ namespace ELuna
 			return *this;
 		}
 
+		//for reading table to cpps 
 		LuaTable(lua_State* L, int index) {
 			if(index < 0) {
 				index = lua_gettop(L) + index + 1;
@@ -258,13 +259,13 @@ namespace ELuna
 	// read a value from lua to cpp
 	///////////////////////////////////////////////////////////////////////////////
 	template<typename T>
-	struct convert2CppType { static T convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
+	struct convert2CppType { inline static T convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
 
 	template<typename T>
-	struct convert2CppType<T*> { static T* convertType(lua_State* L, int index){ return *(T**)lua_touserdata(L, index);} };
+	struct convert2CppType<T*> { inline static T* convertType(lua_State* L, int index){ return *(T**)lua_touserdata(L, index);} };
 
 	template<typename T>
-	struct convert2CppType<T&> { static T& convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
+	struct convert2CppType<T&> { inline static T& convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
 
 	template<typename T> inline T   read2cpp(lua_State *L, int index) {
 		if(!lua_isuserdata(L,index)) {
@@ -298,7 +299,7 @@ namespace ELuna
 	///////////////////////////////////////////////////////////////////////////////
 	template<typename T>
 	struct convert2LuaType {  
-		static void convertType(lua_State* L, T& ret){
+		inline static void convertType(lua_State* L, T& ret){
 			T** ud = (T**)lua_newuserdata(L, sizeof(T*)); 
 			*ud = new T(ret);
 
@@ -309,7 +310,7 @@ namespace ELuna
 
 	template<typename T>
 	struct convert2LuaType<T*> { 
-		static void convertType(lua_State* L, T* ret){ 
+		inline static void convertType(lua_State* L, T* ret){ 
 			T** ud = (T**)lua_newuserdata(L, sizeof(T*)); 
 			*ud = ret;
 
@@ -320,7 +321,7 @@ namespace ELuna
 
 	template<typename T>
 	struct convert2LuaType<T&> {
-		static void convertType(lua_State* L, T& ret){ 
+		inline static void convertType(lua_State* L, T& ret){ 
 			T** ud = (T**)lua_newuserdata(L, sizeof(T*)); 
 			*ud = &ret;
 
@@ -395,13 +396,11 @@ namespace ELuna
 
 	struct GenericMethod
 	{
-	public:
 		virtual ~GenericMethod() {};
 		GenericMethod() {};
 
-		virtual int call(lua_State *L) { return 0;};
+		inline virtual int call(lua_State *L) { return 0;};
 
-	private:
 		const char* m_name;
 	};
 
@@ -414,7 +413,7 @@ namespace ELuna
 		const char* m_name;\
 		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~MethodClass##N(){};\
-		virtual int call(lua_State *L) {\
+		inline virtual int call(lua_State *L) {\
 			T* obj = read2cpp<T*>(L, 1);\
 			push2lua(L, (obj->*m_func)(ELUNA_READ_METHOD_PARAM_LIST_##N));\
 			return 1;\
@@ -430,7 +429,7 @@ namespace ELuna
 		const char* m_name;\
 		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~MethodClass##N(){};\
-		virtual int call(lua_State *L) {\
+		inline virtual int call(lua_State *L) {\
 			T* obj = read2cpp<T*>(L, 1);\
 			(obj->*m_func)(ELUNA_READ_METHOD_PARAM_LIST_##N);\
 			return 0;\
@@ -551,7 +550,7 @@ namespace ELuna
 	}
 
 	template<typename T>
-	int inject(lua_State *L, T* obj) {
+	inline int inject(lua_State *L, T* obj) {
 		T** ud = static_cast<T**>(lua_newuserdata(L, sizeof(T*))); // store a ptr to the ptr
 		*ud = obj; // set the ptr to the ptr to point to the ptr... >.>
 
@@ -756,16 +755,17 @@ namespace ELuna
 
 
 	///////////////////////////////////////////////////////////////////////////////
-	// bind cpp function 
+	// bind cpp function. 
 	///////////////////////////////////////////////////////////////////////////////
+
+	//this is a base function class.
 	struct GenericFunction
 	{
-	public:
 		virtual ~GenericFunction() {};
 		GenericFunction() {};
 
-		virtual int call(lua_State *L) { return 0;};
-	private:
+		inline virtual int call(lua_State *L) { return 0;};
+
 		const char* m_name;
 	};
 
@@ -819,7 +819,7 @@ namespace ELuna
 		const char* m_name;\
 		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~FunctionClass##N() {};\
-		virtual int call(lua_State *L) {\
+		inline virtual int call(lua_State *L) {\
 			push2lua(L, (*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N));\
 			return 1;\
 		};\
@@ -834,7 +834,7 @@ namespace ELuna
 		const char* m_name;\
 		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
 		~FunctionClass##N() {};\
-		virtual int call(lua_State *L) {\
+		inline virtual int call(lua_State *L) {\
 			(*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N);\
 			return 0;\
 		};\
@@ -863,7 +863,7 @@ namespace ELuna
 	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(9)
 
 	inline int proxyFunctionCall(lua_State *L) {
-		GenericFunction* pFunction = (GenericFunction*)lua_touserdata(L, lua_upvalueindex(1));
+		GenericFunction* pFunction = (GenericFunction*)lua_touserdata(L, lua_upvalueindex(1)); //get functionClass pointer
 		return pFunction->call(L); // execute function
 	}
 
@@ -1002,7 +1002,7 @@ namespace ELuna
 		}
 	}
 
-	int error_log(lua_State *L) {
+	inline int error_log(lua_State *L) {
 		printf("error : %s\n", lua_tostring(L, -1));
 
 		traceStack(L, 0);
@@ -1478,8 +1478,11 @@ namespace ELuna
 		lua_State* m_luaState;
 	};
 	
+	///////////////////////////////////////////////////////////////////////////////
+	// CPPGarbage manager methodClass and functionClass obj pointer
+	///////////////////////////////////////////////////////////////////////////////
 	typedef std::vector<GenericFunction*> Function_Vector;
-	typedef std::vector<GenericMethod*> Method_Vector;
+	typedef std::vector<GenericMethod*>   Method_Vector;
 
 	struct CPPGarbage 
 	{
