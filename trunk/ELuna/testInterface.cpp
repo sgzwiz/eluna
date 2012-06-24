@@ -2,6 +2,15 @@
 #include <string.h>
 #include "ELuna.h"
 
+struct TestObj
+{
+	TestObj(const char* name): m_name(name){};
+	~TestObj(){};
+	void print(){printf("hello world: %s [%p]\n", m_name, this);};
+	void changeName(const char* name) {m_name = name;};
+	const char* m_name;
+};
+
 class Test
 {
 public:
@@ -148,6 +157,31 @@ public:
 	}
 	
 	ELuna::LuaString testLuaString(ELuna::LuaString p) {
+		return p;
+	}
+
+	ELuna::LuaTable testLuaTable(ELuna::LuaTable p) {
+		p.set(2, "world");
+		return p;
+	}
+
+	TestObj testObj(TestObj p) {
+		p.m_name = "TestObj Change";
+		return p;
+	}
+
+	TestObj& testObjRef(TestObj& p) {
+		p.m_name = "TestObjRef Changed";
+		return p;
+	}
+
+	void testObjPointer(TestObj* p) {
+		p->m_name = "TestObjPointer Changed";
+	}
+
+	TestObj* testObjPointer1(TestObj* p) {
+		p->m_name = "TestObjPointer Changed";
+		p = new TestObj("fuck pointer");
 		return p;
 	}
 private:
@@ -326,6 +360,7 @@ int retFoo9(int p1, int p2, int p3, int p4, int p5, int p6, int p7, int p8, int 
 void testCPP(lua_State* L) {
 	//register a class and it's constructor. indicate all constructor's param type
 	ELuna::registerClass<Test>(L, "Test0", ELuna::constructor<Test>);
+	ELuna::registerClass<TestObj>(L, "TestObj", ELuna::constructor<TestObj, const char*>);
 	//register a method
 	ELuna::registerMethod<Test>(L, "foo0", &Test::foo0);
 	ELuna::registerMethod<Test>(L, "foo1", &Test::foo1);
@@ -349,6 +384,9 @@ void testCPP(lua_State* L) {
 	ELuna::registerMethod<Test>(L, "retFoo8", &Test::retFoo8);
 	ELuna::registerMethod<Test>(L, "retFoo9", &Test::retFoo9);
 
+	ELuna::registerMethod<TestObj>(L, "print", &TestObj::print);
+	ELuna::registerMethod<TestObj>(L, "changeName", &TestObj::changeName);
+
 	//test read2cpp and push2lua
 	ELuna::registerMethod<Test>(L, "testBool", &Test::testBool);
 	ELuna::registerMethod<Test>(L, "testChar", &Test::testChar);
@@ -365,6 +403,11 @@ void testCPP(lua_State* L) {
 	ELuna::registerMethod<Test>(L, "testULong", &Test::testULong);
 	ELuna::registerMethod<Test>(L, "testULongLong", &Test::testULongLong);
 	ELuna::registerMethod<Test>(L, "testUShort", &Test::testUShort);
+	ELuna::registerMethod<Test>(L, "testLuaTable", &Test::testLuaTable);
+	ELuna::registerMethod<Test>(L, "testObjPointer", &Test::testObjPointer);
+	ELuna::registerMethod<Test>(L, "testObjPointer1", &Test::testObjPointer1);
+	ELuna::registerMethod<Test>(L, "testObj", &Test::testObj);
+	ELuna::registerMethod<Test>(L, "testObjRef", &Test::testObjRef);
 
 	//register a function
 	ELuna::registerFunction(L, "foo0", &foo0);
@@ -413,6 +456,9 @@ void testLua(lua_State* L) {
 	ELuna::LuaFunction<int> retFoo7(L, "retFoo7");
 	ELuna::LuaFunction<int> retFoo8(L, "retFoo8");
 	ELuna::LuaFunction<int> retFoo9(L, "retFoo9");
+	ELuna::LuaFunction<TestObj*> luaTestObjPointer(L, "luaTestObjPointer");
+	ELuna::LuaFunction<TestObj&> luaTestObjRef(L, "luaTestObjRef");
+	ELuna::LuaFunction<TestObj> luaTestObj(L, "luaTestObj");
 
 	foo0();
 	foo1(1);
@@ -435,6 +481,18 @@ void testLua(lua_State* L) {
 	printf("retFoo7: %d\n", retFoo7(1,2,3,4,5,6,7));
 	printf("retFoo8: %d\n", retFoo8(1,2,3,4,5,6,7,8));
 	printf("retFoo9: %d\n", retFoo9(1,2,3,4,5,6,7,8,9));
+
+	TestObj* pObj = new TestObj("TestObj Pointer");
+	TestObj* pObj1 = luaTestObjPointer(pObj);
+	pObj1->print();
+
+	TestObj objRef("TestObj Ref");
+	TestObj& objRef1 = luaTestObjRef(objRef);
+	objRef1.print();
+
+	TestObj obj("TestObj");
+	TestObj obj1 = luaTestObj(obj);
+	obj1.print();
 }
 
 

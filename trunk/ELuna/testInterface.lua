@@ -78,6 +78,24 @@ function retFoo9(p1, p2, p3, p4, p5, p6, p7, p8, p9)
 	return p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9
 end
 
+function luaTestObjPointer(pObj)
+	print("luaTestObjPointer:")
+	pObj:changeName("TestObj Pointer1")
+	return pObj
+end
+
+function luaTestObj(obj)
+	print("luaTestObj:")
+	obj:changeName("TestObj 1")
+	return obj
+end
+
+function luaTestObjRef(objRef)
+	print("luaTestObjRef:")
+	objRef:changeName("TestObj Ref1")
+	return objRef
+end
+
 ----------------------------------------------------------
 print("run cpp interface")
 local cppTest  = Test0()
@@ -131,6 +149,32 @@ print("testFloat: ", cppTest:testFloat(0.33))
 print("testDouble: ", cppTest:testDouble(0.33))
 print("testLuaString: ", cppTest:testLuaString("hello world"))
 
+local table = {"hello"}
+local retTable = cppTest:testLuaTable(table)
+print("testLuaTable: ", retTable[1], retTable[2])
+
+local pObj = TestObj("TestObjPointer")
+cppTest:testObjPointer(pObj)
+print("testObjPointer: ")
+pObj:print()
+
+local pObj = TestObj("TestObjPointer1")
+local a = cppTest:testObjPointer1(pObj)
+print("testObjPointer1: ", a, pObj)
+pObj:print()
+a:print()
+
+local obj = TestObj("TestObj")
+local a = cppTest:testObj(obj)
+print("testObj: ", a, obj)
+obj:print()
+a:print()
+
+local objRef = TestObj("TestObjRef")
+local a = cppTest:testObjRef(objRef)
+print("testObjRef: ", a, objRef)
+objRef:print()
+a:print()
 
 
 

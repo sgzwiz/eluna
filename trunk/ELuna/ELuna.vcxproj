@@ -87,10 +87,10 @@
     <ClInclude Include="ELuna.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="sample.cpp" />
+    <ClCompile Include="testInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="sample.lua" />
+    <None Include="testInterface.lua" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
