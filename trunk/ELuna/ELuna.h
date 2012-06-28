@@ -1,6 +1,6 @@
 // Copyright (c) 2012 rick
 //
-// ELuna - Extense Luna
+// ELuna - Extended Luna
 // ELuna is a simple library to bind C/C++ and lua. It just depend on lua library
 // so it is clear and light. You can include ELuna and lua in your project to use.
 // Eluna provides some simple interface, which hides the stack operations for you.  

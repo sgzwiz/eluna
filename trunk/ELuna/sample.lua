@@ -17,4 +17,5 @@ function luaSum(a, b)
 	return a + b
 end
 
+--define table
 luaTable = {"hello"}
