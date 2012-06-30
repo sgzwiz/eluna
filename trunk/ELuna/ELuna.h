@@ -1,25 +1,20 @@
-// Copyright (c) 2012 rick
-//
+//////////////////////////////////////////////////////////////////////////////////////
 // ELuna - Extended Luna
-// ELuna is a simple library to bind C/C++ and lua. It just depend on lua library
-// so it is clear and light. You can include ELuna and lua in your project to use.
-// Eluna provides some simple interface, which hides the stack operations for you.  
-// You can use it easily to register cpp method, cpp function, lua function and so 
-// on.
-// Eluna's basic idea derives from luna, so it's not to use matetable to find method
-// but copy all method to object's table.
+// 
+// ELuna is a simple and light library to bind C/C++ and Lua, which just 
+// depends on Lua library. It provides some simple API to bind cpp class, 
+// method, function or to bind lua function, table. You can include ELuna 
+// and Lua in your project to use. 
 //
-// mail: radiotail86@gmail.com
-///////////////////////////////////////////////////////////////////////////////////////////
+// Mail: radiotail86@gmail.com
+// About the details of license, please read license.txt
+//////////////////////////////////////////////////////////////////////////////////////
 
 
 #ifndef _LUA_ELUNA_H_
 #define _LUA_ELUNA_H_
 
-#include <new>
-#include <map>
 #include <vector>
-#include <string.h>
 #include <assert.h>
 
 extern "C" {
