@@ -497,7 +497,7 @@ void testLua(lua_State* L) {
 
 
 const char *fileName = "testInterface.lua";
-void main()
+int main()
 {
 	lua_State *L = ELuna::openLua();
 
@@ -508,5 +508,5 @@ void main()
 	testLua(L);
 	ELuna::closeLua(L);
 
-	system("pause");
+	return 0;
 }

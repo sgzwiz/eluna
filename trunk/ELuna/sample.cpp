@@ -74,6 +74,5 @@ int main()
 	testLua(L);
 	ELuna::closeLua(L);
 
-	system("pause");
 	return 0;
 }
