@@ -271,20 +271,48 @@ namespace ELuna
 		return LuaTable(m_luaState, -1);
 	}
 
+	template<typename T>
+	struct UserData {
+		UserData(T* objPtr, bool useLuaGC = true): m_objPtr(objPtr), m_gcFlag(useLuaGC) {};
+		~UserData() {
+			if( m_gcFlag )
+				delete m_objPtr;
+		};
+		T* m_objPtr;
+		bool m_gcFlag;
+	};
 
 	///////////////////////////////////////////////////////////////////////////////
 	// read a value from lua to cpp
 	///////////////////////////////////////////////////////////////////////////////
 	template<typename T>
-	struct convert2CppType { inline static T convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
+	struct convert2CppType {
+		inline static T convertType(lua_State* L, int index){
+			UserData<T>** ud = static_cast<UserData<T>**>(lua_touserdata(L, index));
+			return *((*ud)->m_objPtr);
+		}
+	};
+	//struct convert2CppType { inline static T convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
 
 	template<typename T>
-	struct convert2CppType<T*> { inline static T* convertType(lua_State* L, int index){ return *(T**)lua_touserdata(L, index);} };
+	struct convert2CppType<T*> {
+		inline static T* convertType(lua_State* L, int index){
+			UserData<T>** ud = static_cast<UserData<T>**>(lua_touserdata(L, index));
+			return (*ud)->m_objPtr;
+		}
+	};
+	//struct convert2CppType<T*> { inline static T* convertType(lua_State* L, int index){ return *(T**)lua_touserdata(L, index);} };
 
 	template<typename T>
-	struct convert2CppType<T&> { inline static T& convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
+	struct convert2CppType<T&> {
+		inline static T& convertType(lua_State* L, int index){
+			UserData<T>** ud = static_cast<UserData<T>**>(lua_touserdata(L, index));
+			return *((*ud)->m_objPtr);
+		}
+	};
+	//struct convert2CppType<T&> { inline static T& convertType(lua_State* L, int index){ return **(T**)lua_touserdata(L, index);} };
 
-	template<typename T> inline T   read2cpp(lua_State *L, int index) {
+	template<typename T> inline T read2cpp(lua_State *L, int index) {
 		if(!lua_isuserdata(L,index)) {
 			lua_pushstring(L, "this arg is not a userdata!\n");
 			lua_error(L);
@@ -317,8 +345,10 @@ namespace ELuna
 	template<typename T>
 	struct convert2LuaType {
 		inline static void convertType(lua_State* L, T& ret){
-			T** ud = (T**)lua_newuserdata(L, sizeof(T*));
-			*ud = new T(ret);
+			UserData<T>** ud = static_cast<UserData<T>**>(lua_newuserdata(L, sizeof(UserData<T>*)));
+			*ud = new UserData<T>(new T(ret));
+			/*T** ud = (T**)lua_newuserdata(L, sizeof(T*));
+			*ud = new T(ret);*/
 
 			luaL_getmetatable(L, ClassName<T>::getName());
 			lua_setmetatable(L, -2);
@@ -328,8 +358,10 @@ namespace ELuna
 	template<typename T>
 	struct convert2LuaType<T*> {
 		inline static void convertType(lua_State* L, T* ret){
-			T** ud = (T**)lua_newuserdata(L, sizeof(T*));
-			*ud = ret;
+			UserData<T>** ud = static_cast<UserData<T>**>(lua_newuserdata(L, sizeof(UserData<T>*)));
+			*ud = new UserData<T>(ret, false);
+			/*T** ud = (T**)lua_newuserdata(L, sizeof(T*));
+			*ud = ret;*/
 
 			luaL_getmetatable(L, ClassName<T>::getName());
 			lua_setmetatable(L, -2);
@@ -339,8 +371,10 @@ namespace ELuna
 	template<typename T>
 	struct convert2LuaType<T&> {
 		inline static void convertType(lua_State* L, T& ret){
-			T** ud = (T**)lua_newuserdata(L, sizeof(T*));
-			*ud = &ret;
+			UserData<T>** ud = static_cast<UserData<T>**>(lua_newuserdata(L, sizeof(UserData<T>*)));
+			*ud = new UserData<T>(&ret);
+			/*T** ud = (T**)lua_newuserdata(L, sizeof(T*));
+			*ud = &ret;*/
 
 			luaL_getmetatable(L, ClassName<T>::getName());
 			lua_setmetatable(L, -2);
@@ -423,102 +457,102 @@ namespace ELuna
 	///////////////////////////////////////////////////////////////////////////////
 	// bind cpp method
 	///////////////////////////////////////////////////////////////////////////////
-#define ELUNA_METHODCLASSES_PARAM_LIST_0 typename T
-#define ELUNA_METHODCLASSES_PARAM_LIST_1 ELUNA_METHODCLASSES_PARAM_LIST_0, typename P1
-#define ELUNA_METHODCLASSES_PARAM_LIST_2 ELUNA_METHODCLASSES_PARAM_LIST_1, typename P2
-#define ELUNA_METHODCLASSES_PARAM_LIST_3 ELUNA_METHODCLASSES_PARAM_LIST_2, typename P3
-#define ELUNA_METHODCLASSES_PARAM_LIST_4 ELUNA_METHODCLASSES_PARAM_LIST_3, typename P4
-#define ELUNA_METHODCLASSES_PARAM_LIST_5 ELUNA_METHODCLASSES_PARAM_LIST_4, typename P5
-#define ELUNA_METHODCLASSES_PARAM_LIST_6 ELUNA_METHODCLASSES_PARAM_LIST_5, typename P6
-#define ELUNA_METHODCLASSES_PARAM_LIST_7 ELUNA_METHODCLASSES_PARAM_LIST_6, typename P7
-#define ELUNA_METHODCLASSES_PARAM_LIST_8 ELUNA_METHODCLASSES_PARAM_LIST_7, typename P8
-#define ELUNA_METHODCLASSES_PARAM_LIST_9 ELUNA_METHODCLASSES_PARAM_LIST_8, typename P9
-#define ELUNA_METHODCLASSES_SP_PARAM_LIST_0 T
-#define ELUNA_METHODCLASSES_SP_PARAM_LIST_1 ELUNA_METHODCLASSES_SP_PARAM_LIST_0, P1
-#define ELUNA_METHODCLASSES_SP_PARAM_LIST_2 ELUNA_METHODCLASSES_SP_PARAM_LIST_1, P2
-#define ELUNA_METHODCLASSES_SP_PARAM_LIST_3 ELUNA_METHODCLASSES_SP_PARAM_LIST_2, P3
-#define ELUNA_METHODCLASSES_SP_PARAM_LIST_4 ELUNA_METHODCLASSES_SP_PARAM_LIST_3, P4
-#define ELUNA_METHODCLASSES_SP_PARAM_LIST_5 ELUNA_METHODCLASSES_SP_PARAM_LIST_4, P5
-#define ELUNA_METHODCLASSES_SP_PARAM_LIST_6 ELUNA_METHODCLASSES_SP_PARAM_LIST_5, P6
-#define ELUNA_METHODCLASSES_SP_PARAM_LIST_7 ELUNA_METHODCLASSES_SP_PARAM_LIST_6, P7
-#define ELUNA_METHODCLASSES_SP_PARAM_LIST_8 ELUNA_METHODCLASSES_SP_PARAM_LIST_7, P8
-#define ELUNA_METHODCLASSES_SP_PARAM_LIST_9 ELUNA_METHODCLASSES_SP_PARAM_LIST_8, P9
-#define ELUNA_PARAM_LIST_0
-#define ELUNA_PARAM_LIST_1 ELUNA_PARAM_LIST_0  P1
-#define ELUNA_PARAM_LIST_2 ELUNA_PARAM_LIST_1, P2
-#define ELUNA_PARAM_LIST_3 ELUNA_PARAM_LIST_2, P3
-#define ELUNA_PARAM_LIST_4 ELUNA_PARAM_LIST_3, P4
-#define ELUNA_PARAM_LIST_5 ELUNA_PARAM_LIST_4, P5
-#define ELUNA_PARAM_LIST_6 ELUNA_PARAM_LIST_5, P6
-#define ELUNA_PARAM_LIST_7 ELUNA_PARAM_LIST_6, P7
-#define ELUNA_PARAM_LIST_8 ELUNA_PARAM_LIST_7, P8
-#define ELUNA_PARAM_LIST_9 ELUNA_PARAM_LIST_8, P9
-#define ELUNA_READ_METHOD_PARAM_LIST_0
-#define ELUNA_READ_METHOD_PARAM_LIST_1 ELUNA_READ_METHOD_PARAM_LIST_0  read2cpp<P1>(L,2)
-#define ELUNA_READ_METHOD_PARAM_LIST_2 ELUNA_READ_METHOD_PARAM_LIST_1, read2cpp<P2>(L,3)
-#define ELUNA_READ_METHOD_PARAM_LIST_3 ELUNA_READ_METHOD_PARAM_LIST_2, read2cpp<P3>(L,4)
-#define ELUNA_READ_METHOD_PARAM_LIST_4 ELUNA_READ_METHOD_PARAM_LIST_3, read2cpp<P4>(L,5)
-#define ELUNA_READ_METHOD_PARAM_LIST_5 ELUNA_READ_METHOD_PARAM_LIST_4, read2cpp<P5>(L,6)
-#define ELUNA_READ_METHOD_PARAM_LIST_6 ELUNA_READ_METHOD_PARAM_LIST_5, read2cpp<P6>(L,7)
-#define ELUNA_READ_METHOD_PARAM_LIST_7 ELUNA_READ_METHOD_PARAM_LIST_6, read2cpp<P7>(L,8)
-#define ELUNA_READ_METHOD_PARAM_LIST_8 ELUNA_READ_METHOD_PARAM_LIST_7, read2cpp<P8>(L,9)
-#define ELUNA_READ_METHOD_PARAM_LIST_9 ELUNA_READ_METHOD_PARAM_LIST_8, read2cpp<P9>(L,10)
+	#define ELUNA_METHODCLASSES_PARAM_LIST_0 typename T
+	#define ELUNA_METHODCLASSES_PARAM_LIST_1 ELUNA_METHODCLASSES_PARAM_LIST_0, typename P1
+	#define ELUNA_METHODCLASSES_PARAM_LIST_2 ELUNA_METHODCLASSES_PARAM_LIST_1, typename P2
+	#define ELUNA_METHODCLASSES_PARAM_LIST_3 ELUNA_METHODCLASSES_PARAM_LIST_2, typename P3
+	#define ELUNA_METHODCLASSES_PARAM_LIST_4 ELUNA_METHODCLASSES_PARAM_LIST_3, typename P4
+	#define ELUNA_METHODCLASSES_PARAM_LIST_5 ELUNA_METHODCLASSES_PARAM_LIST_4, typename P5
+	#define ELUNA_METHODCLASSES_PARAM_LIST_6 ELUNA_METHODCLASSES_PARAM_LIST_5, typename P6
+	#define ELUNA_METHODCLASSES_PARAM_LIST_7 ELUNA_METHODCLASSES_PARAM_LIST_6, typename P7
+	#define ELUNA_METHODCLASSES_PARAM_LIST_8 ELUNA_METHODCLASSES_PARAM_LIST_7, typename P8
+	#define ELUNA_METHODCLASSES_PARAM_LIST_9 ELUNA_METHODCLASSES_PARAM_LIST_8, typename P9
+	#define ELUNA_METHODCLASSES_SP_PARAM_LIST_0 T
+	#define ELUNA_METHODCLASSES_SP_PARAM_LIST_1 ELUNA_METHODCLASSES_SP_PARAM_LIST_0, P1
+	#define ELUNA_METHODCLASSES_SP_PARAM_LIST_2 ELUNA_METHODCLASSES_SP_PARAM_LIST_1, P2
+	#define ELUNA_METHODCLASSES_SP_PARAM_LIST_3 ELUNA_METHODCLASSES_SP_PARAM_LIST_2, P3
+	#define ELUNA_METHODCLASSES_SP_PARAM_LIST_4 ELUNA_METHODCLASSES_SP_PARAM_LIST_3, P4
+	#define ELUNA_METHODCLASSES_SP_PARAM_LIST_5 ELUNA_METHODCLASSES_SP_PARAM_LIST_4, P5
+	#define ELUNA_METHODCLASSES_SP_PARAM_LIST_6 ELUNA_METHODCLASSES_SP_PARAM_LIST_5, P6
+	#define ELUNA_METHODCLASSES_SP_PARAM_LIST_7 ELUNA_METHODCLASSES_SP_PARAM_LIST_6, P7
+	#define ELUNA_METHODCLASSES_SP_PARAM_LIST_8 ELUNA_METHODCLASSES_SP_PARAM_LIST_7, P8
+	#define ELUNA_METHODCLASSES_SP_PARAM_LIST_9 ELUNA_METHODCLASSES_SP_PARAM_LIST_8, P9
+	#define ELUNA_PARAM_LIST_0
+	#define ELUNA_PARAM_LIST_1 ELUNA_PARAM_LIST_0  P1
+	#define ELUNA_PARAM_LIST_2 ELUNA_PARAM_LIST_1, P2
+	#define ELUNA_PARAM_LIST_3 ELUNA_PARAM_LIST_2, P3
+	#define ELUNA_PARAM_LIST_4 ELUNA_PARAM_LIST_3, P4
+	#define ELUNA_PARAM_LIST_5 ELUNA_PARAM_LIST_4, P5
+	#define ELUNA_PARAM_LIST_6 ELUNA_PARAM_LIST_5, P6
+	#define ELUNA_PARAM_LIST_7 ELUNA_PARAM_LIST_6, P7
+	#define ELUNA_PARAM_LIST_8 ELUNA_PARAM_LIST_7, P8
+	#define ELUNA_PARAM_LIST_9 ELUNA_PARAM_LIST_8, P9
+	#define ELUNA_READ_METHOD_PARAM_LIST_0
+	#define ELUNA_READ_METHOD_PARAM_LIST_1 ELUNA_READ_METHOD_PARAM_LIST_0  read2cpp<P1>(L,2)
+	#define ELUNA_READ_METHOD_PARAM_LIST_2 ELUNA_READ_METHOD_PARAM_LIST_1, read2cpp<P2>(L,3)
+	#define ELUNA_READ_METHOD_PARAM_LIST_3 ELUNA_READ_METHOD_PARAM_LIST_2, read2cpp<P3>(L,4)
+	#define ELUNA_READ_METHOD_PARAM_LIST_4 ELUNA_READ_METHOD_PARAM_LIST_3, read2cpp<P4>(L,5)
+	#define ELUNA_READ_METHOD_PARAM_LIST_5 ELUNA_READ_METHOD_PARAM_LIST_4, read2cpp<P5>(L,6)
+	#define ELUNA_READ_METHOD_PARAM_LIST_6 ELUNA_READ_METHOD_PARAM_LIST_5, read2cpp<P6>(L,7)
+	#define ELUNA_READ_METHOD_PARAM_LIST_7 ELUNA_READ_METHOD_PARAM_LIST_6, read2cpp<P7>(L,8)
+	#define ELUNA_READ_METHOD_PARAM_LIST_8 ELUNA_READ_METHOD_PARAM_LIST_7, read2cpp<P8>(L,9)
+	#define ELUNA_READ_METHOD_PARAM_LIST_9 ELUNA_READ_METHOD_PARAM_LIST_8, read2cpp<P9>(L,10)
 
-#define ELUNA_MAKE_METHODCLASSX(N)\
+	#define ELUNA_MAKE_METHODCLASSX(N)\
 	template<typename RL, ELUNA_METHODCLASSES_PARAM_LIST_##N >\
 	struct MethodClass##N : GenericMethod\
 	{\
-	typedef RL (T::* TFUNC)(ELUNA_PARAM_LIST_##N);\
-	TFUNC m_func;\
-	const char* m_name;\
-	MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
-	~MethodClass##N(){};\
-	inline virtual int call(lua_State *L) {\
-	T* obj = read2cpp<T*>(L, 1);\
-	push2lua(L, (obj->*m_func)(ELUNA_READ_METHOD_PARAM_LIST_##N));\
-	return 1;\
-	};\
+		typedef RL (T::* TFUNC)(ELUNA_PARAM_LIST_##N);\
+		TFUNC m_func;\
+		const char* m_name;\
+		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		~MethodClass##N(){};\
+		inline virtual int call(lua_State *L) {\
+			T* obj = read2cpp<T*>(L, 1);\
+			push2lua(L, (obj->*m_func)(ELUNA_READ_METHOD_PARAM_LIST_##N));\
+			return 1;\
+		};\
 	};
 
-#define ELUNA_MAKE_VOID_RL_METHODCLASSX(N) \
+	#define ELUNA_MAKE_VOID_RL_METHODCLASSX(N) \
 	template<ELUNA_METHODCLASSES_PARAM_LIST_##N >\
 	struct MethodClass##N<void, ELUNA_METHODCLASSES_SP_PARAM_LIST_##N> : GenericMethod\
 	{\
-	typedef void (T::* TFUNC)(ELUNA_PARAM_LIST_##N);\
-	TFUNC m_func;\
-	const char* m_name;\
-	MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
-	~MethodClass##N(){};\
-	inline virtual int call(lua_State *L) {\
-	T* obj = read2cpp<T*>(L, 1);\
-	(obj->*m_func)(ELUNA_READ_METHOD_PARAM_LIST_##N);\
-	return 0;\
-	};\
+		typedef void (T::* TFUNC)(ELUNA_PARAM_LIST_##N);\
+		TFUNC m_func;\
+		const char* m_name;\
+		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		~MethodClass##N(){};\
+		inline virtual int call(lua_State *L) {\
+			T* obj = read2cpp<T*>(L, 1);\
+			(obj->*m_func)(ELUNA_READ_METHOD_PARAM_LIST_##N);\
+			return 0;\
+		};\
 	};
 
 	ELUNA_MAKE_METHODCLASSX(0)
-		ELUNA_MAKE_METHODCLASSX(1)
-		ELUNA_MAKE_METHODCLASSX(2)
-		ELUNA_MAKE_METHODCLASSX(3)
-		ELUNA_MAKE_METHODCLASSX(4)
-		ELUNA_MAKE_METHODCLASSX(5)
-		ELUNA_MAKE_METHODCLASSX(6)
-		ELUNA_MAKE_METHODCLASSX(7)
-		ELUNA_MAKE_METHODCLASSX(8)
-		ELUNA_MAKE_METHODCLASSX(9)
+	ELUNA_MAKE_METHODCLASSX(1)
+	ELUNA_MAKE_METHODCLASSX(2)
+	ELUNA_MAKE_METHODCLASSX(3)
+	ELUNA_MAKE_METHODCLASSX(4)
+	ELUNA_MAKE_METHODCLASSX(5)
+	ELUNA_MAKE_METHODCLASSX(6)
+	ELUNA_MAKE_METHODCLASSX(7)
+	ELUNA_MAKE_METHODCLASSX(8)
+	ELUNA_MAKE_METHODCLASSX(9)
 
-		ELUNA_MAKE_VOID_RL_METHODCLASSX(0)
-		ELUNA_MAKE_VOID_RL_METHODCLASSX(1)
-		ELUNA_MAKE_VOID_RL_METHODCLASSX(2)
-		ELUNA_MAKE_VOID_RL_METHODCLASSX(3)
-		ELUNA_MAKE_VOID_RL_METHODCLASSX(4)
-		ELUNA_MAKE_VOID_RL_METHODCLASSX(5)
-		ELUNA_MAKE_VOID_RL_METHODCLASSX(6)
-		ELUNA_MAKE_VOID_RL_METHODCLASSX(7)
-		ELUNA_MAKE_VOID_RL_METHODCLASSX(8)
-		ELUNA_MAKE_VOID_RL_METHODCLASSX(9)
+	ELUNA_MAKE_VOID_RL_METHODCLASSX(0)
+	ELUNA_MAKE_VOID_RL_METHODCLASSX(1)
+	ELUNA_MAKE_VOID_RL_METHODCLASSX(2)
+	ELUNA_MAKE_VOID_RL_METHODCLASSX(3)
+	ELUNA_MAKE_VOID_RL_METHODCLASSX(4)
+	ELUNA_MAKE_VOID_RL_METHODCLASSX(5)
+	ELUNA_MAKE_VOID_RL_METHODCLASSX(6)
+	ELUNA_MAKE_VOID_RL_METHODCLASSX(7)
+	ELUNA_MAKE_VOID_RL_METHODCLASSX(8)
+	ELUNA_MAKE_VOID_RL_METHODCLASSX(9)
 
-		template<typename T>
+	template<typename T>
 	struct ClassName
 	{
 		static inline void setName(const char* name) {m_name = name;}
@@ -532,8 +566,9 @@ namespace ELuna
 	template<typename T>
 	inline int gc_obj(lua_State *L) {
 		// clean up
-		T** obj = static_cast<T**>(luaL_checkudata(L, -1, ClassName<T>::getName()));
-		delete (*obj);
+		//printf("gc_obj: %s\n", ClassName<T>::getName());
+		UserData<T>** ud = static_cast<UserData<T>**>(luaL_checkudata(L, -1, ClassName<T>::getName()));
+		delete (*ud);
 		return 0;
 	}
 
@@ -567,9 +602,11 @@ namespace ELuna
 	}
 
 	template<typename T>
-	inline int inject(lua_State *L, T* obj) {
-		T** ud = static_cast<T**>(lua_newuserdata(L, sizeof(T*))); // store a ptr to the ptr
-		*ud = obj; // set the ptr to the ptr to point to the ptr... >.>
+	inline int inject(lua_State *L, T* objPtr) {
+		UserData<T>** ud = static_cast<UserData<T>**>(lua_newuserdata(L, sizeof(UserData<T>*)));
+		*ud = new UserData<T>(objPtr);
+		//T** ud = static_cast<T**>(lua_newuserdata(L, sizeof(T*))); // store a ptr to the ptr
+		//*ud = obj; // set the ptr to the ptr to point to the ptr... >.>
 
 		luaL_getmetatable(L, ClassName<T>::getName());
 		lua_setmetatable(L, -2); // self.metatable = uniqe_metatable
@@ -816,104 +853,102 @@ namespace ELuna
 	///////////////////////////////////////////////////////////////////////////////
 	// bind cpp function.
 	///////////////////////////////////////////////////////////////////////////////
+	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_0 typename RL
+	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_1 ELUNA_FUNCTIONCLASSX_PARAM_LIST_0, typename P1
+	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_2 ELUNA_FUNCTIONCLASSX_PARAM_LIST_1, typename P2
+	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_3 ELUNA_FUNCTIONCLASSX_PARAM_LIST_2, typename P3
+	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_4 ELUNA_FUNCTIONCLASSX_PARAM_LIST_3, typename P4
+	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_5 ELUNA_FUNCTIONCLASSX_PARAM_LIST_4, typename P5
+	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_6 ELUNA_FUNCTIONCLASSX_PARAM_LIST_5, typename P6
+	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_7 ELUNA_FUNCTIONCLASSX_PARAM_LIST_6, typename P7
+	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_8 ELUNA_FUNCTIONCLASSX_PARAM_LIST_7, typename P8
+	#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_9 ELUNA_FUNCTIONCLASSX_PARAM_LIST_8, typename P9
+	#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_0
+	#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_1 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_0  typename P1
+	#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_2 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_1, typename P2
+	#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_3 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_2, typename P3
+	#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_4 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_3, typename P4
+	#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_5 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_4, typename P5
+	#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_6 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_5, typename P6
+	#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_7 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_6, typename P7
+	#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_8 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_7, typename P8
+	#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_9 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_8, typename P9
+	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_0 void
+	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_1 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_0, P1
+	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_2 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_1, P2
+	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_3 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_2, P3
+	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_4 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_3, P4
+	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_5 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_4, P5
+	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_6 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_5, P6
+	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_7 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_6, P7
+	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_8 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_7, P8
+	#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_9 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_8, P9
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_0
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_1 ELUNA_READ_FUNCTION_PARAM_LIST_0  read2cpp<P1>(L,1)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_2 ELUNA_READ_FUNCTION_PARAM_LIST_1, read2cpp<P2>(L,2)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_3 ELUNA_READ_FUNCTION_PARAM_LIST_2, read2cpp<P3>(L,3)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_4 ELUNA_READ_FUNCTION_PARAM_LIST_3, read2cpp<P4>(L,4)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_5 ELUNA_READ_FUNCTION_PARAM_LIST_4, read2cpp<P5>(L,5)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_6 ELUNA_READ_FUNCTION_PARAM_LIST_5, read2cpp<P6>(L,6)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_7 ELUNA_READ_FUNCTION_PARAM_LIST_6, read2cpp<P7>(L,7)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_8 ELUNA_READ_FUNCTION_PARAM_LIST_7, read2cpp<P8>(L,8)
+	#define ELUNA_READ_FUNCTION_PARAM_LIST_9 ELUNA_READ_FUNCTION_PARAM_LIST_8, read2cpp<P9>(L,9)
 
-
-#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_0 typename RL
-#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_1 ELUNA_FUNCTIONCLASSX_PARAM_LIST_0, typename P1
-#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_2 ELUNA_FUNCTIONCLASSX_PARAM_LIST_1, typename P2
-#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_3 ELUNA_FUNCTIONCLASSX_PARAM_LIST_2, typename P3
-#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_4 ELUNA_FUNCTIONCLASSX_PARAM_LIST_3, typename P4
-#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_5 ELUNA_FUNCTIONCLASSX_PARAM_LIST_4, typename P5
-#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_6 ELUNA_FUNCTIONCLASSX_PARAM_LIST_5, typename P6
-#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_7 ELUNA_FUNCTIONCLASSX_PARAM_LIST_6, typename P7
-#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_8 ELUNA_FUNCTIONCLASSX_PARAM_LIST_7, typename P8
-#define ELUNA_FUNCTIONCLASSX_PARAM_LIST_9 ELUNA_FUNCTIONCLASSX_PARAM_LIST_8, typename P9
-#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_0
-#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_1 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_0  typename P1
-#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_2 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_1, typename P2
-#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_3 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_2, typename P3
-#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_4 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_3, typename P4
-#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_5 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_4, typename P5
-#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_6 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_5, typename P6
-#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_7 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_6, typename P7
-#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_8 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_7, typename P8
-#define ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_9 ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_8, typename P9
-#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_0 void
-#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_1 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_0, P1
-#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_2 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_1, P2
-#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_3 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_2, P3
-#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_4 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_3, P4
-#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_5 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_4, P5
-#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_6 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_5, P6
-#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_7 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_6, P7
-#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_8 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_7, P8
-#define ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_9 ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_8, P9
-#define ELUNA_READ_FUNCTION_PARAM_LIST_0
-#define ELUNA_READ_FUNCTION_PARAM_LIST_1 ELUNA_READ_FUNCTION_PARAM_LIST_0  read2cpp<P1>(L,1)
-#define ELUNA_READ_FUNCTION_PARAM_LIST_2 ELUNA_READ_FUNCTION_PARAM_LIST_1, read2cpp<P2>(L,2)
-#define ELUNA_READ_FUNCTION_PARAM_LIST_3 ELUNA_READ_FUNCTION_PARAM_LIST_2, read2cpp<P3>(L,3)
-#define ELUNA_READ_FUNCTION_PARAM_LIST_4 ELUNA_READ_FUNCTION_PARAM_LIST_3, read2cpp<P4>(L,4)
-#define ELUNA_READ_FUNCTION_PARAM_LIST_5 ELUNA_READ_FUNCTION_PARAM_LIST_4, read2cpp<P5>(L,5)
-#define ELUNA_READ_FUNCTION_PARAM_LIST_6 ELUNA_READ_FUNCTION_PARAM_LIST_5, read2cpp<P6>(L,6)
-#define ELUNA_READ_FUNCTION_PARAM_LIST_7 ELUNA_READ_FUNCTION_PARAM_LIST_6, read2cpp<P7>(L,7)
-#define ELUNA_READ_FUNCTION_PARAM_LIST_8 ELUNA_READ_FUNCTION_PARAM_LIST_7, read2cpp<P8>(L,8)
-#define ELUNA_READ_FUNCTION_PARAM_LIST_9 ELUNA_READ_FUNCTION_PARAM_LIST_8, read2cpp<P9>(L,9)
-
-#define ELUNA_MAKE_FUNCTIONCLASSX(N)\
+	#define ELUNA_MAKE_FUNCTIONCLASSX(N)\
 	template<ELUNA_FUNCTIONCLASSX_PARAM_LIST_##N >\
 	struct FunctionClass##N : GenericFunction\
 	{\
-	typedef RL (* TFUNC)(ELUNA_PARAM_LIST_##N);\
-	TFUNC m_func;\
-	const char* m_name;\
-	FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
-	~FunctionClass##N() {};\
-	inline virtual int call(lua_State *L) {\
-	push2lua(L, (*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N));\
-	return 1;\
-	};\
+		typedef RL (* TFUNC)(ELUNA_PARAM_LIST_##N);\
+		TFUNC m_func;\
+		const char* m_name;\
+		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		~FunctionClass##N() {};\
+			inline virtual int call(lua_State *L) {\
+			push2lua(L, (*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N));\
+			return 1;\
+		};\
 	};
 
-#define ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(N) \
+	#define ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(N) \
 	template<ELUNA_FUNCTIONCLASSX_VOID_RL_PARAM_LIST_##N >\
 	struct FunctionClass##N<ELUNA_FUNCTIONCLASSX_SP_PARAM_LIST_##N> : GenericFunction\
 	{\
-	typedef void (* TFUNC)(ELUNA_PARAM_LIST_##N);\
-	TFUNC m_func;\
-	const char* m_name;\
-	FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
-	~FunctionClass##N() {};\
-	inline virtual int call(lua_State *L) {\
-	(*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N);\
-	return 0;\
-	};\
+		typedef void (* TFUNC)(ELUNA_PARAM_LIST_##N);\
+		TFUNC m_func;\
+		const char* m_name;\
+		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		~FunctionClass##N() {};\
+			inline virtual int call(lua_State *L) {\
+			(*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N);\
+			return 0;\
+		};\
 	};
 
 	ELUNA_MAKE_FUNCTIONCLASSX(0)
-		ELUNA_MAKE_FUNCTIONCLASSX(1)
-		ELUNA_MAKE_FUNCTIONCLASSX(2)
-		ELUNA_MAKE_FUNCTIONCLASSX(3)
-		ELUNA_MAKE_FUNCTIONCLASSX(4)
-		ELUNA_MAKE_FUNCTIONCLASSX(5)
-		ELUNA_MAKE_FUNCTIONCLASSX(6)
-		ELUNA_MAKE_FUNCTIONCLASSX(7)
-		ELUNA_MAKE_FUNCTIONCLASSX(8)
-		ELUNA_MAKE_FUNCTIONCLASSX(9)
+	ELUNA_MAKE_FUNCTIONCLASSX(1)
+	ELUNA_MAKE_FUNCTIONCLASSX(2)
+	ELUNA_MAKE_FUNCTIONCLASSX(3)
+	ELUNA_MAKE_FUNCTIONCLASSX(4)
+	ELUNA_MAKE_FUNCTIONCLASSX(5)
+	ELUNA_MAKE_FUNCTIONCLASSX(6)
+	ELUNA_MAKE_FUNCTIONCLASSX(7)
+	ELUNA_MAKE_FUNCTIONCLASSX(8)
+	ELUNA_MAKE_FUNCTIONCLASSX(9)
 
-		ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(0)
-		ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(1)
-		ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(2)
-		ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(3)
-		ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(4)
-		ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(5)
-		ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(6)
-		ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(7)
-		ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(8)
-		ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(9)
+	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(0)
+	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(1)
+	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(2)
+	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(3)
+	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(4)
+	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(5)
+	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(6)
+	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(7)
+	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(8)
+	ELUNA_MAKE_VOID_RL_FUNCTIONCLASSX(9)
 
-		inline int proxyFunctionCall(lua_State *L) {
-			GenericFunction* pFunction = (GenericFunction*)lua_touserdata(L, lua_upvalueindex(1)); //get functionClass pointer
-			return pFunction->call(L); // execute function
+	inline int proxyFunctionCall(lua_State *L) {
+		GenericFunction* pFunction = (GenericFunction*)lua_touserdata(L, lua_upvalueindex(1)); //get functionClass pointer
+		return pFunction->call(L); // execute function
 	}
 
 	template<typename RL>
