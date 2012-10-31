@@ -67,7 +67,7 @@ namespace ELuna
 	///////////////////////////////////////////////////////////////////////////////
 	struct LuaTable
 	{
-		LuaTable(): m_luaState(NULL), m_refCount(NULL), m_tableAdd(NULL) {} ;
+		LuaTable(): m_refCount(NULL), m_tableAdd(NULL), m_luaState(NULL) {} ;
 
 		LuaTable(lua_State* L) {
 			lua_newtable(L);
@@ -506,7 +506,7 @@ namespace ELuna
 		typedef RL (T::* TFUNC)(ELUNA_PARAM_LIST_##N);\
 		TFUNC m_func;\
 		const char* m_name;\
-		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		MethodClass##N( const char* name, TFUNC func): m_func(func), m_name(name) {};\
 		~MethodClass##N(){};\
 		inline virtual int call(lua_State *L) {\
 			T* obj = read2cpp<T*>(L, 1);\
@@ -522,7 +522,7 @@ namespace ELuna
 		typedef void (T::* TFUNC)(ELUNA_PARAM_LIST_##N);\
 		TFUNC m_func;\
 		const char* m_name;\
-		MethodClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		MethodClass##N( const char* name, TFUNC func): m_func(func), m_name(name) {};\
 		~MethodClass##N(){};\
 		inline virtual int call(lua_State *L) {\
 			T* obj = read2cpp<T*>(L, 1);\
@@ -902,7 +902,7 @@ namespace ELuna
 		typedef RL (* TFUNC)(ELUNA_PARAM_LIST_##N);\
 		TFUNC m_func;\
 		const char* m_name;\
-		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		FunctionClass##N( const char* name, TFUNC func): m_func(func), m_name(name) {};\
 		~FunctionClass##N() {};\
 			inline virtual int call(lua_State *L) {\
 			push2lua(L, (*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N));\
@@ -917,7 +917,7 @@ namespace ELuna
 		typedef void (* TFUNC)(ELUNA_PARAM_LIST_##N);\
 		TFUNC m_func;\
 		const char* m_name;\
-		FunctionClass##N( const char* name, TFUNC func):m_name(name),m_func(func) {};\
+		FunctionClass##N( const char* name, TFUNC func): m_func(func), m_name(name) {};\
 		~FunctionClass##N() {};\
 			inline virtual int call(lua_State *L) {\
 			(*m_func)(ELUNA_READ_FUNCTION_PARAM_LIST_##N);\
