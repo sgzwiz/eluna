@@ -30,12 +30,13 @@ namespace ELuna
 	struct CPPGarbage;
 	template<typename T> struct ClassName;
 
-	void traceStack(lua_State* L, int n);
+	inline void traceStack(lua_State* L, int n);
 	inline int error_log(lua_State *L);
-	void doFile(lua_State *L, const char *fileName);
+	inline void doFile(lua_State *L, const char *fileName);
 	inline lua_State* openLua();
 	inline void closeLua(lua_State* L);
 	template<typename T> inline T read2cpp(lua_State *L, int index);
+	template<typename T> inline void push2lua(lua_State *L, T ret);
 
 	///////////////////////////////////////////////////////////////////////////////
 	// lua's string type
@@ -1071,7 +1072,7 @@ namespace ELuna
 		CPPGarbage::pushFunction(pFunction);
 	}
 
-	void traceStack(lua_State* L, int n) {
+	inline void traceStack(lua_State* L, int n) {
 		lua_Debug ar;
 		if(lua_getstack(L, n, &ar)) {
 			lua_getinfo(L, "Sln", &ar);
@@ -1562,7 +1563,7 @@ namespace ELuna
 		lua_State* m_luaState;
 	};
 
-	void doFile(lua_State *L, const char *fileName) {
+	inline void doFile(lua_State *L, const char *fileName) {
 		lua_pushcclosure(L, error_log, 0);
 		int stackTop = lua_gettop(L);
 
@@ -1578,7 +1579,7 @@ namespace ELuna
 		lua_pop(L, 1);
 	}
 
-	lua_State* openLua() {
+	inline lua_State* openLua() {
 		lua_State *L = lua_open();
 
 		luaopen_base(L);
@@ -1588,7 +1589,7 @@ namespace ELuna
 		return L;
 	}
 
-	void closeLua(lua_State* L) {
+	inline void closeLua(lua_State* L) {
 		CPPGarbage::release();
 		lua_close(L);
 	}
