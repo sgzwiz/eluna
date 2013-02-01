@@ -17,10 +17,16 @@
 #include <vector>
 #include <assert.h>
 
+//extern "C" {
+//#include "lua/lua.h"
+//#include "lua/lualib.h"
+//#include "lua/lauxlib.h"
+//}
+
 extern "C" {
-#include "lua/lua.h"
-#include "lua/lualib.h"
-#include "lua/lauxlib.h"
+#include "lua52/lua.h"
+#include "lua52/lualib.h"
+#include "lua52/lauxlib.h"
 }
 
 namespace ELuna
@@ -113,8 +119,7 @@ namespace ELuna
 
 		// bind Lua Talbe
 		LuaTable(lua_State* L, const char* name) {
-			lua_pushstring(L, name);
-			lua_gettable(L, LUA_GLOBALSINDEX);
+			lua_getglobal(L, name);
 
 			if (lua_istable(L, -1)) {
 				m_luaState = L;
@@ -956,10 +961,9 @@ namespace ELuna
 	inline void registerFunction(lua_State* L, const char* name, RL (*func)()) {
 		FunctionClass0<RL>* pFunction = new FunctionClass0<RL>(name, func);
 
-		lua_pushstring(L, name);
 		lua_pushlightuserdata(L, pFunction);
 		lua_pushcclosure(L, proxyFunctionCall, 1);
-		lua_settable(L, LUA_GLOBALSINDEX);
+		lua_setglobal(L, name);
 
 		CPPGarbage::pushFunction(pFunction);
 	}
@@ -968,10 +972,9 @@ namespace ELuna
 	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1)) {
 		FunctionClass1<RL, P1>* pFunction = new FunctionClass1<RL, P1>(name, func);
 
-		lua_pushstring(L, name);
 		lua_pushlightuserdata(L, pFunction);
 		lua_pushcclosure(L, proxyFunctionCall, 1);
-		lua_settable(L, LUA_GLOBALSINDEX);
+		lua_setglobal(L, name);
 
 		CPPGarbage::pushFunction(pFunction);
 	}
@@ -980,10 +983,9 @@ namespace ELuna
 	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2)) {
 		FunctionClass2<RL, P1, P2>* pFunction = new FunctionClass2<RL, P1, P2>(name, func);
 
-		lua_pushstring(L, name);
 		lua_pushlightuserdata(L, pFunction);
 		lua_pushcclosure(L, proxyFunctionCall, 1);
-		lua_settable(L, LUA_GLOBALSINDEX);
+		lua_setglobal(L, name);
 
 		CPPGarbage::pushFunction(pFunction);
 	}
@@ -992,10 +994,9 @@ namespace ELuna
 	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3)) {
 		FunctionClass3<RL, P1, P2, P3>* pFunction = new FunctionClass3<RL, P1, P2, P3>(name, func);
 
-		lua_pushstring(L, name);
 		lua_pushlightuserdata(L, pFunction);
 		lua_pushcclosure(L, proxyFunctionCall, 1);
-		lua_settable(L, LUA_GLOBALSINDEX);
+		lua_setglobal(L, name);
 
 		CPPGarbage::pushFunction(pFunction);
 	}
@@ -1004,10 +1005,9 @@ namespace ELuna
 	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4)) {
 		FunctionClass4<RL, P1, P2, P3, P4>* pFunction = new FunctionClass4<RL, P1, P2, P3, P4>(name, func);
 
-		lua_pushstring(L, name);
 		lua_pushlightuserdata(L, pFunction);
 		lua_pushcclosure(L, proxyFunctionCall, 1);
-		lua_settable(L, LUA_GLOBALSINDEX);
+		lua_setglobal(L, name);
 
 		CPPGarbage::pushFunction(pFunction);
 	}
@@ -1016,10 +1016,9 @@ namespace ELuna
 	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5)) {
 		FunctionClass5<RL, P1, P2, P3, P4, P5>* pFunction = new FunctionClass5<RL, P1, P2, P3, P4, P5>(name, func);
 
-		lua_pushstring(L, name);
 		lua_pushlightuserdata(L, pFunction);
 		lua_pushcclosure(L, proxyFunctionCall, 1);
-		lua_settable(L, LUA_GLOBALSINDEX);
+		lua_setglobal(L, name);
 
 		CPPGarbage::pushFunction(pFunction);
 	}
@@ -1028,10 +1027,9 @@ namespace ELuna
 	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6)) {
 		FunctionClass6<RL, P1, P2, P3, P4, P5, P6>* pFunction = new FunctionClass6<RL, P1, P2, P3, P4, P5, P6>(name, func);
 
-		lua_pushstring(L, name);
 		lua_pushlightuserdata(L, pFunction);
 		lua_pushcclosure(L, proxyFunctionCall, 1);
-		lua_settable(L, LUA_GLOBALSINDEX);
+		lua_setglobal(L, name);
 
 		CPPGarbage::pushFunction(pFunction);
 	}
@@ -1040,10 +1038,9 @@ namespace ELuna
 	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7)) {
 		FunctionClass7<RL, P1, P2, P3, P4, P5, P6, P7>* pFunction = new FunctionClass7<RL, P1, P2, P3, P4, P5, P6, P7>(name, func);
 
-		lua_pushstring(L, name);
 		lua_pushlightuserdata(L, pFunction);
 		lua_pushcclosure(L, proxyFunctionCall, 1);
-		lua_settable(L, LUA_GLOBALSINDEX);
+		lua_setglobal(L, name);
 
 		CPPGarbage::pushFunction(pFunction);
 	}
@@ -1052,10 +1049,9 @@ namespace ELuna
 	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7, P8)) {
 		FunctionClass8<RL, P1, P2, P3, P4, P5, P6, P7, P8>* pFunction = new FunctionClass8<RL, P1, P2, P3, P4, P5, P6, P7, P8>(name, func);
 
-		lua_pushstring(L, name);
 		lua_pushlightuserdata(L, pFunction);
 		lua_pushcclosure(L, proxyFunctionCall, 1);
-		lua_settable(L, LUA_GLOBALSINDEX);
+		lua_setglobal(L, name);
 
 		CPPGarbage::pushFunction(pFunction);
 	}
@@ -1064,10 +1060,9 @@ namespace ELuna
 	inline void registerFunction(lua_State* L, const char* name, RL (*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9)) {
 		FunctionClass9<RL, P1, P2, P3, P4, P5, P6, P7, P8, P9>* pFunction = new FunctionClass9<RL, P1, P2, P3, P4, P5, P6, P7, P8, P9>(name, func);
 
-		lua_pushstring(L, name);
 		lua_pushlightuserdata(L, pFunction);
 		lua_pushcclosure(L, proxyFunctionCall, 1);
-		lua_settable(L, LUA_GLOBALSINDEX);
+		lua_setglobal(L, name);
 
 		CPPGarbage::pushFunction(pFunction);
 	}
@@ -1108,8 +1103,7 @@ namespace ELuna
 		}
 
 		LuaFunction(lua_State* L, const char* funcName): m_luaState(L) {
-			lua_pushstring(L, funcName);
-			lua_gettable(L, LUA_GLOBALSINDEX);
+			lua_getglobal(L, funcName);
 
 			if (lua_isfunction(L, -1)) {
 				m_ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -1273,8 +1267,7 @@ namespace ELuna
 		}
 
 		LuaFunction(lua_State* L, const char* funcName): m_luaState(L) {
-			lua_pushstring(L, funcName);
-			lua_gettable(L, LUA_GLOBALSINDEX);
+			lua_getglobal(L, funcName);
 
 			if (lua_isfunction(L, -1)) {
 				m_ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -1423,8 +1416,7 @@ namespace ELuna
 	{
 	public:
 		LuaFunction(lua_State* L, const char* funcName): m_luaState(L) {
-			lua_pushstring(L, funcName);
-			lua_gettable(L, LUA_GLOBALSINDEX);
+			lua_getglobal(L, funcName);
 
 			if (lua_isfunction(L, -1)) {
 				m_ref = luaL_ref(L, LUA_REGISTRYINDEX);
@@ -1580,7 +1572,7 @@ namespace ELuna
 	}
 
 	inline lua_State* openLua() {
-		lua_State *L = lua_open();
+		lua_State *L = luaL_newstate();
 
 		luaopen_base(L);
 		luaL_openlibs(L);
