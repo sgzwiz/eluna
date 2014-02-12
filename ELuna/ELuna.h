@@ -321,7 +321,7 @@ namespace ELuna
 		return convert2CppType<T>::convertType(L, index);
 	};
 	template<>	inline void			read2cpp(lua_State *L, int index) {};
-	template<>	inline bool         read2cpp(lua_State *L, int index) { return lua_toboolean(L, -1) ? true : false;};
+	template<>	inline bool         read2cpp(lua_State *L, int index) { return lua_toboolean(L, index) ? true : false;};
 	template<>	inline char*		read2cpp(lua_State *L, int index) { return (char*)lua_tostring(L, index); };
 	template<>	inline const char*	read2cpp(lua_State *L, int index) { return (const char*)lua_tostring(L, index);};
 	template<>	inline char			read2cpp(lua_State *L, int index) { return (char)lua_tonumber(L, index);};
